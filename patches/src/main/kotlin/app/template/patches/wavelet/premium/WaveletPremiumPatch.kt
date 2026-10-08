@@ -5,7 +5,6 @@ import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.WAVELET_COMPATIBILITY
-import app.template.patches.shared.findMutableMethodOf
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -19,8 +18,9 @@ import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 // - Patch B: a single Boolean.valueOf + move-result-object feeds the single
 //   Lx7/v0;->i compareAndSet; the boxed result register is forced to TRUE.
 // - No Pairirp, no signature self-check, no integrity checks, no ads.
-// - Tokens (Lr5/k;, Lx7/k;, Lx7/v0;) rotate per release; the layout
-//   assertions below fail loud — re-run the recon probes on update.
+// - Fingerprints pin by signature (like the meteoblue 3.1.4 patch); the
+//   bodies below re-verify layout and fail loud — re-run the recon probes
+//   if tokens move on a rebuild of the same version.
 
 private fun Instruction.fieldRef(): FieldReference? =
     (this as? ReferenceInstruction)?.reference as? FieldReference
@@ -39,9 +39,8 @@ val waveletPremiumPatch = bytecodePatch(
     execute {
         // ── Patch A: Lr5/k;.<init> — start the purchase state flow as TRUE ──
         val initMethod = PurchaseStateInitFingerprint.method
-        val mutableInit = mutableClassDefBy(initMethod.definingClass).findMutableMethodOf(initMethod)
 
-        val flowPutIndex = mutableInit.instructions
+        val flowPutIndex = initMethod.instructions
             .mapIndexedNotNull { index, instruction ->
                 if (instruction.opcode == Opcode.IPUT_OBJECT &&
                     instruction.fieldRef()?.let { it.definingClass == "Lr5/k;" && it.name == "f" } == true
@@ -61,8 +60,8 @@ val waveletPremiumPatch = bytecodePatch(
         //   [flowPutIndex-2] invoke-static {vN}, Lx7/k;->b(Ljava/lang/Object;)Lx7/v0;
         //   [flowPutIndex-1] move-result-object vN
         //   [flowPutIndex]   iput-object vN, vP, Lr5/k;->f:Lx7/v0;
-        val falseSget = mutableInit.instructions.elementAt(flowPutIndex - 3)
-        val flowCreate = mutableInit.instructions.elementAt(flowPutIndex - 2)
+        val falseSget = initMethod.instructions.elementAt(flowPutIndex - 3)
+        val flowCreate = initMethod.instructions.elementAt(flowPutIndex - 2)
         if (falseSget.opcode != Opcode.SGET_OBJECT ||
             falseSget.fieldRef()?.let { it.definingClass == "Ljava/lang/Boolean;" && it.name == "FALSE" } != true ||
             flowCreate.methodRef()?.let { it.definingClass == "Lx7/k;" && it.name == "b" } != true
@@ -74,16 +73,15 @@ val waveletPremiumPatch = bytecodePatch(
         // Overwrite the register with TRUE immediately before the factory call;
         // the original FALSE sget-object becomes dead code.
         val stateReg = (falseSget as OneRegisterInstruction).registerA
-        mutableInit.addInstructions(
+        initMethod.addInstructions(
             flowPutIndex - 2,
             "sget-object v$stateReg, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;",
         )
 
         // ── Patch B: Lr5/k;.e — always report a verified purchase ──────────
         val processMethod = PurchaseProcessingFingerprint.method
-        val mutableProcess = mutableClassDefBy(processMethod.definingClass).findMutableMethodOf(processMethod)
 
-        val compareAndSetIndex = mutableProcess.instructions
+        val compareAndSetIndex = processMethod.instructions
             .mapIndexedNotNull { index, instruction ->
                 if (instruction.opcode == Opcode.INVOKE_VIRTUAL &&
                     instruction.methodRef()?.let { it.definingClass == "Lx7/v0;" && it.name == "i" } == true
@@ -102,8 +100,8 @@ val waveletPremiumPatch = bytecodePatch(
         //   [compareAndSetIndex-2] invoke-static {v8}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
         //   [compareAndSetIndex-1] move-result-object v6
         //   [compareAndSetIndex]   invoke-virtual {v2, v4, v6}, Lx7/v0;->i(Object;Object)Z
-        val valueOf = mutableProcess.instructions.elementAt(compareAndSetIndex - 2)
-        val boxResult = mutableProcess.instructions.elementAt(compareAndSetIndex - 1)
+        val valueOf = processMethod.instructions.elementAt(compareAndSetIndex - 2)
+        val boxResult = processMethod.instructions.elementAt(compareAndSetIndex - 1)
         if (valueOf.opcode != Opcode.INVOKE_STATIC ||
             valueOf.methodRef()?.let { it.definingClass == "Ljava/lang/Boolean;" && it.name == "valueOf" } != true ||
             boxResult.opcode != Opcode.MOVE_RESULT_OBJECT
@@ -116,7 +114,7 @@ val waveletPremiumPatch = bytecodePatch(
         // and the compareAndSet — every path through the coroutine converges
         // here, so the flow can never be flipped back to false.
         val boxReg = (boxResult as OneRegisterInstruction).registerA
-        mutableProcess.addInstructions(
+        processMethod.addInstructions(
             compareAndSetIndex,
             "sget-object v$boxReg, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;",
         )
