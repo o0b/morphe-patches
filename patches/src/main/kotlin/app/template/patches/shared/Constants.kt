@@ -5,7 +5,6 @@ import app.morphe.patcher.patch.AppTarget
 import app.morphe.patcher.patch.Compatibility
 
 object Constants {
-
     val METEOBLUE_COMPATIBILITY = Compatibility(
         name = "meteoblue Weather",
         packageName = "com.meteoblue.droid",
@@ -28,5 +27,15 @@ object Constants {
         apkFileType = ApkFileType.XAPK,
         appIconColor = 0x1E88E5,
         targets = listOf(AppTarget(version = "26.05", versionCode = 260508))
+    )
+
+    // Nova Launcher 8.1.6 ships as a plain APK (single dex, no splits).
+    // The manifest versionName is literally "81006 (8.1.6)".
+    val NOVA_LAUNCHER_COMPATIBILITY = Compatibility(
+        name = "Nova Launcher",
+        packageName = "com.teslacoilsw.launcher",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0xE53935,
+        targets = listOf(AppTarget(version = "81006 (8.1.6)", versionCode = 81006))
     )
 }
