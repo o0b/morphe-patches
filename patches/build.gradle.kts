@@ -1,14 +1,13 @@
-group = "app.template"
+group = "app.o0b.morphe-patches"
 
 patches {
-    // TODO: Update this section with your project details.
     about {
-        name = "UserXYZ Patches"
-        description = "Patches for apps I like"
-        source = "git@github.com:UserXYZ/morphe-patches.git"
-        author = "Awesome dev"
-        contact = "na"
-        website = "na"
+        name = "o0b Patches"
+        description = "Octopi Launcher Pro unlock (1.92)"
+        source = "https://github.com/o0b/morphe-patches"
+        author = "o0b"
+        contact = "https://github.com/o0b"
+        website = "https://morphe.software/add-source?github=o0b/morphe-patches"
         license = "GPLv3"
     }
 }
@@ -23,7 +22,7 @@ dependencies {
 }
 
 tasks {
-    register<JavaExec>("generatePatchesList") {
+    register("generatePatchesList") {
         description = "Build patch with patch list"
 
         dependsOn(build)
