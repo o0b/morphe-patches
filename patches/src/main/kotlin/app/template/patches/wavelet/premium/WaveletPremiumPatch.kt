@@ -7,18 +7,17 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.WAVELET_COMPATIBILITY
 import app.template.patches.shared.findMutableMethodOf
 import com.android.tools.smali.dexlib2.Opcode
-import com.android.tools.smali.dexlib2.iface.Instruction
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.VariableRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
 // Verified against 26.05 bytecode (versionCode 260508, recon 2026-10-08):
 // - Patch A: the flow's FALSE sget-object is immediately followed by the
 //   Lx7/k;->b factory and the Lr5/k;->f iput (4 contiguous instructions).
-// - Patch B: a single Boolean.valueOf feeds the single Lx7/v0;->i
-//   compareAndSet; its register also survives to the DataStore write.
+// - Patch B: a single Boolean.valueOf + move-result-object feeds the single
+//   Lx7/v0;->i compareAndSet; the boxed result register is forced to TRUE.
 // - No Pairirp, no signature self-check, no integrity checks, no ads.
 // - Tokens (Lr5/k;, Lx7/k;, Lx7/v0;) rotate per release; the layout
 //   assertions below fail loud — re-run the recon probes on update.
@@ -100,20 +99,26 @@ val waveletPremiumPatch = bytecodePatch(
         )
 
         // Expected layout (recon 2026-10-08):
-        //   [compareAndSetIndex-2] invoke-static {vN}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
-        //   [compareAndSetIndex-1] move-result-object vM
-        //   [compareAndSetIndex]   invoke-virtual {..}, Lx7/v0;->i(Object;Object)Z
+        //   [compareAndSetIndex-2] invoke-static {v8}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
+        //   [compareAndSetIndex-1] move-result-object v6
+        //   [compareAndSetIndex]   invoke-virtual {v2, v4, v6}, Lx7/v0;->i(Object;Object)Z
         val valueOf = mutableProcess.instructions.elementAt(compareAndSetIndex - 2)
+        val boxResult = mutableProcess.instructions.elementAt(compareAndSetIndex - 1)
         if (valueOf.opcode != Opcode.INVOKE_STATIC ||
-            valueOf.methodRef()?.let { it.definingClass == "Ljava/lang/Boolean;" && it.name == "valueOf" } != true
+            valueOf.methodRef()?.let { it.definingClass == "Ljava/lang/Boolean;" && it.name == "valueOf" } != true ||
+            boxResult.opcode != Opcode.MOVE_RESULT_OBJECT
         ) throw PatchException(
-            "Wavelet 26.05: unexpected layout before Lx7/v0;->i — expected Boolean.valueOf. " +
-                "Tokens moved; re-run the recon probe."
+            "Wavelet 26.05: unexpected layout before Lx7/v0;->i — expected Boolean.valueOf + " +
+                "move-result-object. Tokens moved; re-run the recon probe."
         )
 
-        // vN feeds BOTH the StateFlow compareAndSet and the DataStore
-        // "purchased" write (the register survives the suspension via Lr5/i;->h).
-        val verdictReg = (valueOf as VariableRegisterInstruction).getRegister(0)
-        mutableProcess.addInstructions(compareAndSetIndex - 2, "const/4 v$verdictReg, 0x1")
+        // Overwrite the boxed result with TRUE between the move-result-object
+        // and the compareAndSet — every path through the coroutine converges
+        // here, so the flow can never be flipped back to false.
+        val boxReg = (boxResult as OneRegisterInstruction).registerA
+        mutableProcess.addInstructions(
+            compareAndSetIndex,
+            "sget-object v$boxReg, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;",
+        )
     }
 }
