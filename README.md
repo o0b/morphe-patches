@@ -4,7 +4,9 @@ Click here to add these patches to Morphe: https://morphe.software/add-source?gi
 
 ## 🩹 Patches list
 
-A list of your patches will automatically be shown here after your first patches release is created.
+<!-- PATCHES_START [EXPANDED] -->
+
+<!-- PATCHES_END -->
 
 ## 📜 License
 
