@@ -1,5 +1,38 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "0.0.0",
-  "patches": []
+  "version": "1.0.0",
+  "patches": [
+    {
+      "name": "Unlock Pro",
+      "description": "Unlocks Octopi Launcher Pro by returning true from the isPro LiveData getter, bypassing all pro feature gates without modifying billing or database logic.",
+      "default": true,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.otp.octopilauncher",
+          "name": "Octopi Launcher",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#FF6600",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "1.92",
+              "versionCodes": {
+                "ARM64_V8A": 2309,
+                "ARMEABI_V7A": 2309,
+                "X86_64": 2309,
+                "X86": 2309
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    }
+  ]
 }
