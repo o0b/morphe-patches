@@ -1,6 +1,6 @@
 # o0b Patches
 
-Personal Morphe patch bundle — currently just the Octopi Launcher Pro unlock.
+Personal Morphe patch bundle
 
 ## ❓ About
 
