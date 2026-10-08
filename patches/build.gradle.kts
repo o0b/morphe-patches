@@ -22,7 +22,7 @@ dependencies {
 }
 
 tasks {
-    register("generatePatchesList") {
+    register<JavaExec>("generatePatchesList") {
         description = "Build patch with patch list"
 
         dependsOn(build)
