@@ -1,10 +1,8 @@
 # o0b Patches
 
-Personal Morphe patch bundle
-
 ## ❓ About
 
-Patches for apps I like.
+Morphe patches
 
 ### How to use these patches
 
