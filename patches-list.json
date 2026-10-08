@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "patches": [
     {
       "name": "Unlock Premium",
@@ -56,6 +56,38 @@
                 "ARMEABI_V7A": 2309,
                 "X86_64": 2309,
                 "X86": 2309
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Unlock Pro",
+      "description": "Unlocks Wavelet's pro features (Reverberation, Virtualizer, Bass tuner, Equal loudness) by initializing the purchase-verified state flow to true and making the purchase processor always report a verified purchase, which also suppresses the purchase flow.",
+      "default": true,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.pittvandewitt.wavelet",
+          "name": "Wavelet",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#1E88E5",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "26.05",
+              "versionCodes": {
+                "ARM64_V8A": 260508,
+                "ARMEABI_V7A": 260508,
+                "X86_64": 260508,
+                "X86": 260508
               },
               "isExperimental": false,
               "minSdk": null,

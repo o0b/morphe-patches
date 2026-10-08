@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/o0b/morphe-patches/compare/v1.1.0...v1.2.0) (2026-10-08)
+
+### ✨ New Features
+
+* wavelet 26.05 ([a61423d](https://github.com/o0b/morphe-patches/commit/a61423d91bb6e41f7b9eba2344fb3b10dd88d09a))
+
 ## [1.1.0](https://github.com/o0b/morphe-patches/compare/v1.0.0...v1.1.0) (2026-10-08)
 
 ### ✨ New Features
