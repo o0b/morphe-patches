@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/o0b/morphe-patches/compare/v1.0.0...v1.1.0) (2026-10-08)
+
+### ✨ New Features
+
+* meteoblue 3.1.4 unlock ([a8136bf](https://github.com/o0b/morphe-patches/commit/a8136bfb61bed3dfc0b0baa9849028ab92116214))
+
 ## 1.0.0 (2026-10-08)
 
 ### ✨ New Features
