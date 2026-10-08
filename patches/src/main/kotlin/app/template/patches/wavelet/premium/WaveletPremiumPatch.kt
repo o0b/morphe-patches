@@ -5,6 +5,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.WAVELET_COMPATIBILITY
+import app.template.patches.shared.findMutableMethodOf
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -12,15 +13,30 @@ import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
-// Verified against 26.05 bytecode (versionCode 260508, recon 2026-10-08):
-// - Patch A: the flow's FALSE sget-object is immediately followed by the
-//   Lx7/k;->b factory and the Lr5/k;->f iput (4 contiguous instructions).
-// - Patch B: a single Boolean.valueOf + move-result-object feeds the single
-//   Lx7/v0;->i compareAndSet; the boxed result register is forced to TRUE.
+// Wavelet 26.05 Pro Patch — merged design.
+//
+// Ours (source-side forcing, register-agnostic, fail-loud, no deps) +
+// Epxec's (rename-resilient developer-string anchoring):
+//   A) <init>(Context): the purchase flow is built from Boolean.FALSE via
+//      a static factory; overwrite that register with TRUE immediately
+//      before the factory call → the flow starts purchased, and every
+//      consumer behaves as a genuine purchase would (isPurchased gate
+//      opens, allowPurchases = session && !true hides the buy flow,
+//      the restore coroutine early-outs — no startup billing attempt).
+//   B) e(): force the published verdict TRUE between Boolean.valueOf and
+//      the StateFlow compareAndSet, so a later billing event (empty list,
+//      sandboxed-Play restore) can never flip the flow back to false.
+// No obfuscated names are pinned: the fingerprint anchors on the dev's
+// verification strings; both injection sites are located by framework-
+// stable shape (Boolean.FALSE / Boolean.valueOf + opcode windows).
+// Every step asserts and fails loud; version pinned via
+// WAVELET_COMPATIBILITY — the only artifact that rotates per release.
+//
+// Verified against 26.05 bytecode (recon 2026-10-08):
+// - flow init:  sget-object FALSE → invoke-static → move-result-object → iput-object
+// - verdict:    invoke-static Boolean.valueOf(Z) → move-result-object →
+//               invoke-virtual (Object;Object)Z
 // - No Pairirp, no signature self-check, no integrity checks, no ads.
-// - Fingerprints pin by signature (like the meteoblue 3.1.4 patch); the
-//   bodies below re-verify layout and fail loud — re-run the recon probes
-//   if tokens move on a rebuild of the same version.
 
 private fun Instruction.fieldRef(): FieldReference? =
     (this as? ReferenceInstruction)?.reference as? FieldReference
@@ -37,85 +53,97 @@ val waveletPremiumPatch = bytecodePatch(
     compatibleWith(WAVELET_COMPATIBILITY)
 
     execute {
-        // ── Patch A: Lr5/k;.<init> — start the purchase state flow as TRUE ──
-        val initMethod = PurchaseStateInitFingerprint.method
+        val processor = PurchaseProcessingFingerprint.method
+        val managerClass = mutableClassDefBy(processor.definingClass)
 
-        val flowPutIndex = initMethod.instructions
-            .mapIndexedNotNull { index, instruction ->
-                if (instruction.opcode == Opcode.IPUT_OBJECT &&
-                    instruction.fieldRef()?.let { it.definingClass == "Lr5/k;" && it.name == "f" } == true
-                ) index else null
+        // ── Patch A: <init>(Context) — start the purchase state flow TRUE ──
+        val ctorDef = managerClass.methods
+            .singleOrNull {
+                it.name == "<init>" &&
+                    it.parameterTypes.singleOrNull()?.toString() == "Landroid/content/Context;"
             }
-            .firstOrNull()
             ?: throw PatchException(
-                "Wavelet 26.05: no iput-object on Lr5/k;->f in the purchase state initializer."
+                "Wavelet 26.05: PurchaseManager <init>(Landroid/content/Context;) not found. " +
+                    "Class layout changed; re-run the recon probe."
+            )
+        val ctor = managerClass.findMutableMethodOf(ctorDef)
+        val ctorInsns = ctor.instructions.toList()
+
+        // MutableStateFlow(false) init shape (framework-stable, no names):
+        //   [i]   sget-object vN, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;
+        //   [i+1] invoke-static {vN}, <MutableStateFlow factory>
+        //   [i+2] move-result-object vN
+        //   [i+3] iput-object vN, vP, <purchase flow field>
+        val flowInitSites = ctorInsns.indices.filter { i ->
+            i + 3 < ctorInsns.size &&
+                ctorInsns[i].opcode == Opcode.SGET_OBJECT &&
+                ctorInsns[i].fieldRef()?.let {
+                    it.definingClass == "Ljava/lang/Boolean;" && it.name == "FALSE"
+                } == true &&
+                ctorInsns[i + 1].opcode == Opcode.INVOKE_STATIC &&
+                ctorInsns[i + 2].opcode == Opcode.MOVE_RESULT_OBJECT &&
+                ctorInsns[i + 3].opcode == Opcode.IPUT_OBJECT
+        }
+        val flowInitIndex = flowInitSites.singleOrNull()
+            ?: throw PatchException(
+                "Wavelet 26.05: FALSE-initialized state flow not found uniquely in the " +
+                    "PurchaseManager constructor (${flowInitSites.size} candidate sites) — " +
+                    "expected sget-object FALSE + invoke-static + move-result-object + " +
+                    "iput-object. Layout changed; re-run the recon probe."
             )
 
-        if (flowPutIndex < 3) throw PatchException(
-            "Wavelet 26.05: unexpected layout around Lr5/k;->f (flowPutIndex=$flowPutIndex)."
-        )
-
-        // Expected layout (recon 2026-10-08):
-        //   [flowPutIndex-3] sget-object vN, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;
-        //   [flowPutIndex-2] invoke-static {vN}, Lx7/k;->b(Ljava/lang/Object;)Lx7/v0;
-        //   [flowPutIndex-1] move-result-object vN
-        //   [flowPutIndex]   iput-object vN, vP, Lr5/k;->f:Lx7/v0;
-        val falseSget = initMethod.instructions.elementAt(flowPutIndex - 3)
-        val flowCreate = initMethod.instructions.elementAt(flowPutIndex - 2)
-        if (falseSget.opcode != Opcode.SGET_OBJECT ||
-            falseSget.fieldRef()?.let { it.definingClass == "Ljava/lang/Boolean;" && it.name == "FALSE" } != true ||
-            flowCreate.methodRef()?.let { it.definingClass == "Lx7/k;" && it.name == "b" } != true
-        ) throw PatchException(
-            "Wavelet 26.05: unexpected layout around Lr5/k;->f init — expected FALSE sget-object " +
-                "followed by the Lx7/k;->b StateFlow factory. Tokens moved; re-run the recon probe."
+        // Type consistency: the iput field's type must equal the factory's
+        // return type (both are the flow type — stable under R8 renames).
+        val flowType = ctorInsns[flowInitIndex + 1].methodRef()?.returnType
+        val fieldType = ctorInsns[flowInitIndex + 3].fieldRef()?.type
+        if (flowType.isNullOrEmpty() || fieldType != flowType) throw PatchException(
+            "Wavelet 26.05: constructor flow-init site does not feed an iput of the " +
+                "factory's return type. Layout changed; re-run the recon probe."
         )
 
         // Overwrite the register with TRUE immediately before the factory call;
         // the original FALSE sget-object becomes dead code.
-        val stateReg = (falseSget as OneRegisterInstruction).registerA
-        initMethod.addInstructions(
-            flowPutIndex - 2,
+        val stateReg = (ctorInsns[flowInitIndex] as OneRegisterInstruction).registerA
+        ctor.addInstructions(
+            flowInitIndex + 1,
             "sget-object v$stateReg, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;",
         )
 
-        // ── Patch B: Lr5/k;.e — always report a verified purchase ──────────
-        val processMethod = PurchaseProcessingFingerprint.method
+        // ── Patch B: the processor — always report a verified purchase ────
+        val procInsns = processor.instructions.toList()
 
-        val compareAndSetIndex = processMethod.instructions
-            .mapIndexedNotNull { index, instruction ->
-                if (instruction.opcode == Opcode.INVOKE_VIRTUAL &&
-                    instruction.methodRef()?.let { it.definingClass == "Lx7/v0;" && it.name == "i" } == true
-                ) index else null
-            }
-            .firstOrNull()
+        // Verdict publish shape (framework-stable, no names):
+        //   [j]   invoke-static {vN}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
+        //   [j+1] move-result-object vM
+        //   [j+2] invoke-virtual {..}, <StateFlow>.compareAndSet(Object;Object)Z
+        val verdictSites = procInsns.indices.filter { j ->
+            j + 2 < procInsns.size &&
+                procInsns[j].opcode == Opcode.INVOKE_STATIC &&
+                procInsns[j].methodRef()?.let {
+                    it.definingClass == "Ljava/lang/Boolean;" &&
+                        it.name == "valueOf" &&
+                        it.parameterTypes.singleOrNull()?.toString() == "Z" &&
+                        it.returnType == "Ljava/lang/Boolean;"
+                } == true &&
+                procInsns[j + 1].opcode == Opcode.MOVE_RESULT_OBJECT &&
+                procInsns[j + 2].opcode == Opcode.INVOKE_VIRTUAL &&
+                procInsns[j + 2].methodRef()?.let {
+                    it.returnType == "Z" && it.parameterTypes.size == 2
+                } == true
+        }
+        val verdictIndex = verdictSites.singleOrNull()
             ?: throw PatchException(
-                "Wavelet 26.05: no Lx7/v0;->i compareAndSet in the purchase processor."
+                "Wavelet 26.05: verdict publish (Boolean.valueOf → compareAndSet) not found " +
+                    "uniquely in the purchase processor (${verdictSites.size} candidate sites). " +
+                    "Layout changed; re-run the recon probe."
             )
-
-        if (compareAndSetIndex < 2) throw PatchException(
-            "Wavelet 26.05: unexpected layout before Lx7/v0;->i (compareAndSetIndex=$compareAndSetIndex)."
-        )
-
-        // Expected layout (recon 2026-10-08):
-        //   [compareAndSetIndex-2] invoke-static {v8}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
-        //   [compareAndSetIndex-1] move-result-object v6
-        //   [compareAndSetIndex]   invoke-virtual {v2, v4, v6}, Lx7/v0;->i(Object;Object)Z
-        val valueOf = processMethod.instructions.elementAt(compareAndSetIndex - 2)
-        val boxResult = processMethod.instructions.elementAt(compareAndSetIndex - 1)
-        if (valueOf.opcode != Opcode.INVOKE_STATIC ||
-            valueOf.methodRef()?.let { it.definingClass == "Ljava/lang/Boolean;" && it.name == "valueOf" } != true ||
-            boxResult.opcode != Opcode.MOVE_RESULT_OBJECT
-        ) throw PatchException(
-            "Wavelet 26.05: unexpected layout before Lx7/v0;->i — expected Boolean.valueOf + " +
-                "move-result-object. Tokens moved; re-run the recon probe."
-        )
 
         // Overwrite the boxed result with TRUE between the move-result-object
         // and the compareAndSet — every path through the coroutine converges
         // here, so the flow can never be flipped back to false.
-        val boxReg = (boxResult as OneRegisterInstruction).registerA
-        processMethod.addInstructions(
-            compareAndSetIndex,
+        val boxReg = (procInsns[verdictIndex + 1] as OneRegisterInstruction).registerA
+        processor.addInstructions(
+            verdictIndex + 2,
             "sget-object v$boxReg, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;",
         )
     }
