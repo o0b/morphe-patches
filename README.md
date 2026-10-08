@@ -1,5 +1,3 @@
-# o0b Patches
-
 ### How to use these patches
 
 Click here to add these patches to Morphe: https://morphe.software/add-source?github=o0b/morphe-patches
