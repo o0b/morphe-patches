@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/o0b/morphe-patches/compare/v1.3.0...v1.4.0) (2026-10-08)
+
+### ✨ New Features
+
+* nova launcher 8.1.6 ([7fa5df7](https://github.com/o0b/morphe-patches/commit/7fa5df763a41c2d9914bd792d5ac084546709097))
+
 ## [1.3.0](https://github.com/o0b/morphe-patches/compare/v1.2.0...v1.3.0) (2026-10-08)
 
 ### ✨ New Features

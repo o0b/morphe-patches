@@ -13,7 +13,25 @@ Click here to add these patches to Morphe: https://morphe.software/add-source?gi
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.3.0](https://github.com/o0b/morphe-patches/releases/tag/v1.3.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;3 patches total
+> **[v1.4.0](https://github.com/o0b/morphe-patches/releases/tag/v1.4.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;7 patches total
+<details open>
+<summary>📦 Nova Launcher&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 81006 (8.1.6) |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Disable Bugsnag](#disable-bugsnag) | No-ops Bugsnag on Nova Launcher 8.1.6: both HTTP deliverers return DELIVERED so no payload ever leaves the device (queued error files are deleted as sent), and Nova's error-reporting flag is forced false — which also disables novalytics usage recording. The client still initializes; crash data stays local-only. |  |
+| [Disable Sesame integrations](#disable-sesame-integrations) | Disables Nova Launcher 8.1.6's Sesame third-party integrations (Spotify, OneDrive, Twitch, Slack, Discord, Dropbox, Deezer, GitHub): the integration ingest always returns 0 items, so no background or manual data pulls run and their APIs are never contacted. The Sesame engine and local search indexing continue to work. |  |
+| [Disable Sesame search results](#disable-sesame-search-results) | Removes the bundled Sesame (Branch) deep-shortcut results from Nova Launcher's search on 8.1.6 by no-op'ing its results provider. Search still returns apps, contacts and settings. |  |
+| [Unlock Prime](#unlock-prime) | Unlocks Nova Launcher Prime on 8.1.6 by forcing the runtime prime flags (Lzg/t1;->y / ->t) to true at every write — the settings initializer and the Prime-unlocker package-change handler. |  |
+
+</details>
+
 <details open>
 <summary>📦 meteoblue Weather&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
