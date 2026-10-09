@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "patches": [
     {
       "name": "Disable Amazon IAP components",
@@ -650,8 +650,8 @@
       ]
     },
     {
-      "name": "Remove camera permissions",
-      "description": "Strips the app's camera permission declarations, capture included. All removals are on by default — open the patch options (gear) to keep specific ones.",
+      "name": "Remove camera & flashlight permissions",
+      "description": "Strips the app's camera and flashlight permission declarations, capture included. All removals are on by default — open the patch options (gear) to keep specific ones.",
       "default": false,
       "category": null,
       "dependencies": [],
@@ -670,6 +670,15 @@
           "key": "stripFgsCamera",
           "title": "FOREGROUND_SERVICE_CAMERA",
           "description": "Android 14+ service-context camera capture behind a persistent-process notification.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripFlashlight",
+          "title": "FLASHLIGHT",
+          "description": "Legacy normal permission, deprecated since Android 6 — the modern torch (setTorchMode) needs no permission, so the declaration is dead weight; stripping is hygiene. Apps that branch on the permission check may hide their own torch button.",
           "required": false,
           "type": "kotlin.Boolean",
           "default": true,
@@ -834,8 +843,8 @@
       ]
     },
     {
-      "name": "Remove microphone permissions",
-      "description": "Strips the app's microphone permission declarations, service-context capture included. All removals are on by default — open the patch options (gear) to keep specific ones.",
+      "name": "Remove microphone & audio permissions",
+      "description": "Strips the app's audio declarations — microphone capture, service-context capture, and global audio-state modification. All removals are on by default — open the patch options (gear) to keep specific ones.",
       "default": false,
       "category": null,
       "dependencies": [],
@@ -854,6 +863,15 @@
           "key": "stripFgsMicrophone",
           "title": "FOREGROUND_SERVICE_MICROPHONE",
           "description": "Android 14+ service-context background audio capture behind a persistent-process notification.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripModifyAudioSettings",
+          "title": "MODIFY_AUDIO_SETTINGS",
+          "description": "Granted at install with no prompt: the app can modify global audio state — volume, ringer mode and audio routing during calls. An integrity surface over the device's audio configuration; call and voice apps lose their adjustments.",
           "required": false,
           "type": "kotlin.Boolean",
           "default": true,
@@ -1162,6 +1180,15 @@
           "values": null
         }
       ]
+    },
+    {
+      "name": "Remove silent download permission",
+      "description": "Removes android.permission.DOWNLOAD_WITHOUT_NOTIFICATION — the grant apps declare to run DownloadManager transfers with hidden visibility, so payload pulls (including dropper self-updates) happen with no visible notification. Once stripped, a hidden download request fails loudly at enqueue (SecurityException: Invalid value for visibility: 2) instead of hiding — the transfer can no longer be invisible. Pairs with the REQUEST_INSTALL_PACKAGES toggle in the special-access patch; apps that legitimately download quietly in the background (e.g. podcast auto-updates) will surface notifications or fail at the attempt — smoke test per app.",
+      "default": false,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": null,
+      "options": []
     },
     {
       "name": "Remove special-access permissions",

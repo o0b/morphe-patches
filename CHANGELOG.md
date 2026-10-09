@@ -1,3 +1,9 @@
+## [1.8.0](https://github.com/o0b/morphe-patches/compare/v1.7.0...v1.8.0) (2026-10-09)
+
+### ✨ New Features
+
+* update UniversalPermissionPatches ([9361d9f](https://github.com/o0b/morphe-patches/commit/9361d9f87ce547b9a372e4145d575ee81e4efdb7))
+
 ## [1.7.0](https://github.com/o0b/morphe-patches/compare/v1.6.1...v1.7.0) (2026-10-09)
 
 ### ✨ New Features
