@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/o0b/morphe-patches/compare/v1.4.0...v1.5.0) (2026-10-09)
+
+### ✨ New Features
+
+* universal patches ([e60a674](https://github.com/o0b/morphe-patches/commit/e60a674dce64abe97d4de0a85cf41daa78534bed))
+
 ## [1.4.0](https://github.com/o0b/morphe-patches/compare/v1.3.0...v1.4.0) (2026-10-08)
 
 ### ✨ New Features
