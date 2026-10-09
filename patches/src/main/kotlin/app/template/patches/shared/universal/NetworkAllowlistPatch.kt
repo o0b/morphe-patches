@@ -4,14 +4,13 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.instructionsOrNull
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
-import app.morphe.patcher.patch.AccessFlags
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.stringOption
+import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction35c
 import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction3rc
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
-import com.android.tools.smali.dexlib2.AccessFlags
 
 /**
  * Universal "Network host allowlist" master patch — the allowlist inversion
@@ -39,7 +38,7 @@ import com.android.tools.smali.dexlib2.AccessFlags
  */
 private const val HELPER = "Lapp/template/extension/extension/NetworkGuardHelper;"
 
-private class GuardTarget(
+private class DnsTarget(
     val className: String,
     val methodName: String,
     val parameters: String,
@@ -48,8 +47,8 @@ private class GuardTarget(
 )
 
 private val DNS_TARGETS = listOf(
-    GuardTarget("Ljava/net/InetAddress;", "getByName", "Ljava/lang/String;", "Ljava/net/InetAddress;", null),
-    GuardTarget("Ljava/net/InetAddress;", "getAllByName", "Ljava/lang/String;", "[Ljava/net/InetAddress;", null),
+    DnsTarget("Ljava/net/InetAddress;", "getByName", "Ljava/lang/String;", "Ljava/net/InetAddress;", null),
+    DnsTarget("Ljava/net/InetAddress;", "getAllByName", "Ljava/lang/String;", "[Ljava/net/InetAddress;", null),
 )
 
 private val networkAllowlistApplicationAttachFingerprint = Fingerprint(
