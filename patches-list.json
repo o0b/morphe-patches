@@ -1,10 +1,10 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "patches": [
     {
-      "name": "Clear task affinity",
-      "description": "Sets android:taskAffinity to empty on the application element, so no other installed app can clone this app's affinity to interleave phishing UI in front of it — the StrandHogg pattern. Document-centric apps relying on custom per-activity affinities keep them.",
+      "name": "Disable Amazon IAP components",
+      "description": "Disables the orphan Amazon In-App Purchasing response receiver and strips the Amazon PrivacyPass attest permission. Inert without the Amazon Appstore installed.",
       "default": false,
       "category": null,
       "dependencies": [],
@@ -50,6 +50,60 @@
           ]
         }
       ],
+      "options": []
+    },
+    {
+      "name": "Disable CafeBazaar components",
+      "description": "Disables the orphan CafeBazaar in-app billing receiver and strips its pay-through permission. Inert without CafeBazaar installed.",
+      "default": false,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": null,
+      "options": []
+    },
+    {
+      "name": "Disable Google Play billing components",
+      "description": "Disables the Play Billing library's proxy billing activities, the Play Core dialog wrapper and asset-pack extraction services, and the Pairip license activity. Billing and licensing permission declarations are handled by the Remove GMS permissions master patch — this patch only disables the components. Purchases were already impossible in re-signed patched APKs.",
+      "default": false,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": null,
+      "options": []
+    },
+    {
+      "name": "Disable Huawei store components",
+      "description": "Disables orphan Huawei HMS, AGConnect and OTA update SDK components: the HMS bridge and enable-service activities, AGConnect service discovery and initializer, Huawei's in-app OTA updater, package installer and file provider, and the account sign-in hub activities. Strips the AppGallery common-data permission. Inert without Huawei AppGallery installed.",
+      "default": false,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": null,
+      "options": []
+    },
+    {
+      "name": "Disable OneStore components",
+      "description": "Disables orphan OneStore (Korean GAA SDK) components: the IAP proxy activity and sign-in activity. Inert without OneStore installed.",
+      "default": false,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": null,
+      "options": []
+    },
+    {
+      "name": "Disable RuStore components",
+      "description": "Disables orphan RuStore SDK components: the payment activity, pay and imaging content providers, and the metrics event job service. Inert without RuStore installed.",
+      "default": false,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": null,
+      "options": []
+    },
+    {
+      "name": "Disable Samsung IAP components",
+      "description": "Disables orphan Samsung In-App Purchase SDK components: the dialog, package-check, account, payment and subscription-plan activities. Strips the Samsung IAP billing permission. Inert without Samsung Galaxy Store installed.",
+      "default": false,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": null,
       "options": []
     },
     {
@@ -117,8 +171,8 @@
       "options": []
     },
     {
-      "name": "Disable ad SDK calls",
-      "description": "No-ops common ad SDK load/show/init/fetch methods in bundled ad packages.",
+      "name": "Disable Xiaomi store components",
+      "description": "Disables orphan Xiaomi billing client and Common IAP components: the proxy billing activities and payment/extra web activities they register. Inert without Xiaomi's store and payment service installed.",
       "default": false,
       "category": null,
       "dependencies": [],
@@ -126,8 +180,8 @@
       "options": []
     },
     {
-      "name": "Disable auto backup",
-      "description": "Sets android:allowBackup=false on the application element, excluding the app's private data — databases, preferences, tokens — from cloud auto backup, adb backup and device-transfer migrations. Apps that rely on backup-restore for migration will lose that.",
+      "name": "Disable ad SDK calls",
+      "description": "No-ops common ad SDK load/show/init/fetch methods in bundled ad packages.",
       "default": false,
       "category": null,
       "dependencies": [],
@@ -153,332 +207,152 @@
       "options": []
     },
     {
-      "name": "Disable show-when-locked",
-      "description": "Disables android:showWhenLocked on every activity that declared it. No app screen can display over the lock screen anymore. Stalkerware and scareware use lock-screen overlays to fake unlock prompts and push alerts while the phone is locked; alarm, incoming-call and 2FA screens lose their over-lock UX.",
+      "name": "Disable lock-screen display",
+      "description": "Disables android:showWhenLocked and android:turnScreenOn on every activity that declared them, so no app screen can display over the lock screen and no activity can wake the screen by itself. Stalkerware and scareware use lock-screen overlays to fake unlock prompts and push alerts while the phone is locked; alarm, incoming-call and 2FA screens lose their over-lock UX. Both removals are on by default — open the patch options (gear) to deselect one.",
       "default": false,
       "category": null,
       "dependencies": [],
       "compatiblePackages": null,
-      "options": []
+      "options": [
+        {
+          "key": "stripShowWhenLocked",
+          "title": "Disable show-when-locked",
+          "description": "No app screen can display over the lock screen anymore — the lock-screen overlay channel dies with it.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripTurnScreenOn",
+          "title": "Disable turn-screen-on",
+          "description": "No activity can wake the screen by itself anymore — ad and spyware screen-wake behavior goes with it.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        }
+      ]
     },
     {
-      "name": "Disable task re-parenting",
-      "description": "Sets allowTaskReparenting=false on the application element and on every activity that declared it, closing the re-parenting mechanism a malicious task uses to slide in front of this app — StrandHogg 2.0's route. Apps that rely on cross-task re-parenting lose it.",
+      "name": "IPC guard (cross-app exfil barrier)",
+      "description": "A cross-app IPC barrier for suspect apps: outbound intents to other packages are dropped (own-package traffic passes through), ContentResolver access to foreign authorities is blocked, runtime receivers become not-exported, and notification PendingIntents aimed at other apps become no-ops. The manifest sweep (providers unexported, <queries> stripped, HCE removed) always applies. Breaks share sheets, link opens, pickers and cross-app logins unless the destination package is in the allowlist. All guards are on by default — open the patch options (gear) to deselect or allowlist.",
       "default": false,
       "category": null,
-      "dependencies": [],
+      "dependencies": [
+        "ResourcePatch"
+      ],
       "compatiblePackages": null,
-      "options": []
+      "options": [
+        {
+          "key": "guardIntents",
+          "title": "Guard outbound intents",
+          "description": "Rewrites startActivity/startService/bindService/sendBroadcast call sites through the allowlist — the main choke point for explicit cross-app transitions.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "guardProviders",
+          "title": "Guard content providers",
+          "description": "Rewrites ContentResolver query/insert/update/delete/call/open* call sites — foreign authorities blocked, own package and platform authorities allowed.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "guardReceivers",
+          "title": "Force receivers not-exported",
+          "description": "Rewrites registerReceiver call sites to add RECEIVER_NOT_EXPORTED on API 33+, closing the invisible-export receiver door.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "guardPendingIntents",
+          "title": "Guard PendingIntents",
+          "description": "Rewrites PendingIntent creation sites — foreign targets become self-targeted no-ops, so notification lures cannot reach other apps when the system fires them.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "ipcGuardAllowedPackages",
+          "title": "Allowed packages",
+          "description": "Comma-separated destination packages to allow through the barrier (your browser, gallery picker, etc.). The first entry is used as the browser for implicit ACTION_VIEW links.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": "",
+          "values": null
+        }
+      ]
     },
     {
-      "name": "Disable turn-screen-on",
-      "description": "Disables android:turnScreenOn on every activity that declared it. No activity can wake the screen by itself anymore. Ad and spyware screen-wake behavior dies with it — and so do alarm and incoming-call screens.",
+      "name": "Override auto backup",
+      "description": "Forces android:allowBackup on the application element in the chosen direction. Disable excludes the app's private data — databases, preferences, tokens — from cloud auto backup, adb backup and device transfers (the privacy direction). Enable restores the platform default for apps that opted out, overriding the developer's protection of secrets and license tokens. Pick the direction in the patch options (gear); default is Disable.",
       "default": false,
       "category": null,
       "dependencies": [],
       "compatiblePackages": null,
-      "options": []
+      "options": [
+        {
+          "key": "backupOverride",
+          "title": "Backup override",
+          "description": "Which direction to force android:allowBackup.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": "disable",
+          "values": {
+            "Disable auto backup": "disable",
+            "Enable auto backup": "enable"
+          }
+        }
+      ]
     },
     {
-      "name": "Enable auto backup",
-      "description": "Sets android:allowBackup=true on the application element, restoring the platform default for apps that opted out — their private data joins cloud auto backup and device transfers. The developer's exclusion of secrets and license tokens is overridden; license checks may break after a restore.",
+      "name": "Prevent task hijacking (StrandHogg)",
+      "description": "Hardens the app against task-hijacking overlays (StrandHogg): clears the cloneable task affinity, disables activity re-parenting and pins launcher activities to singleTask so no other app can interleave phishing UI in front of this one. Recents behavior can change (relaunch resumes instead of restarting; splash launchers may act differently). All mitigations are on by default — open the patch options (gear) to deselect.",
       "default": false,
       "category": null,
       "dependencies": [],
       "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Force launcher singleTask",
-      "description": "Sets launchMode=singleTask on launcher activities, pinning the app's root so no other activity can share its task. Recents behavior can change: relaunching from the home screen resumes instead of restarting, and splash-screen launchers may behave differently.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACCESS_ADSERVICES_ATTRIBUTION permission",
-      "description": "Removes the android.permission.ACCESS_ADSERVICES_ATTRIBUTION permission from the manifest. Android 13+ Privacy Sandbox: lets the app measure ad attribution — install and conversion events matched across apps. Completes the adservices family alongside the TOPICS and AD_ID removal patches.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACCESS_ADSERVICES_TOPICS permission",
-      "description": "Removes the android.permission.ACCESS_ADSERVICES_TOPICS permission from the manifest. Android 13+ Privacy Sandbox: lets the app read your Topics advertising-interest profile. Removing it opts the app out of interest-based ad profiling.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACCESS_AD_SERVICES_AD_ID permission",
-      "description": "Removes the android.permission.ACCESS_AD_SERVICES_AD_ID permission from the manifest. Android 13+ Privacy Sandbox: lets the app read the advertising ID used for attribution and profiling. Removing it revokes that access, breaking cross-app ad tracking.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACCESS_BACKGROUND_LOCATION permission",
-      "description": "Removes the android.permission.ACCESS_BACKGROUND_LOCATION permission from the manifest. Grants a silent 24/7 location trail with no visible app use — the highest-risk location permission. Removing it caps the app to while-in-use location only; weather and map apps that never need background use are unaffected.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACCESS_COARSE_LOCATION permission",
-      "description": "Removes the android.permission.ACCESS_COARSE_LOCATION permission from the manifest. Grants an approximate position stream — lower fidelity than fine location but the same pattern-of-life leak, and it works offline.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACCESS_FINE_LOCATION permission",
-      "description": "Removes the android.permission.ACCESS_FINE_LOCATION permission from the manifest. Grants a GNSS pattern-of-life trail — home, work, habits. GPS is receive-only and works fully offline with no network needed. Maps and navigation apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACCESS_LOCAL_NETWORK permission",
-      "description": "Removes the android.permission.ACCESS_LOCAL_NETWORK permission from the manifest. Android 16+ gate for local-network access: lets the app scan and inventory your LAN, where every device and vendor is a fingerprintable data point. Removing it blocks local network access; casting and LAN apps will lose it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACCESS_MEDIA_LOCATION permission",
-      "description": "Removes the android.permission.ACCESS_MEDIA_LOCATION permission from the manifest. Extracts EXIF GPS from shared media — a location-history leak that bypasses location permissions entirely. Photo apps lose location grouping.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACCESS_NETWORK_STATE permission",
-      "description": "Removes the android.permission.ACCESS_NETWORK_STATE permission from the manifest. Reveals the current network type and availability, and lets ad SDKs detect active VPNs to work around ad blocking. Pair it with removing INTERNET to fully blind ad and analytics SDKs.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACCESS_WIFI_STATE permission",
-      "description": "Removes the android.permission.ACCESS_WIFI_STATE permission from the manifest. Exposes Wi-Fi connection details: network names and BSSIDs identify your home network, and BSSID-to-location databases can place you physically. Apps that gate large downloads on Wi-Fi may misbehave.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ACTIVITY_RECOGNITION permission",
-      "description": "Removes the android.permission.ACTIVITY_RECOGNITION permission from the manifest. Builds a gait and motion-state behavioral profile — a cheap, continuous, passive fingerprint of how you move. Fitness step counters need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove AD_ID permission (Google Play Services)",
-      "description": "Removes the com.google.android.gms.permission.AD_ID permission from the manifest. Required since Android 12 for an app to read the Google Play advertising ID — the cross-app identifier ad SDKs profile and attribute against. Removing it makes the app read a zeroed ad ID instead.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove ANSWER_PHONE_CALLS permission",
-      "description": "Removes the android.permission.ANSWER_PHONE_CALLS permission from the manifest. Lets the app answer and control incoming calls — a call-hijack primitive used by spyware. No normal app needs it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BIND_ACCESSIBILITY_SERVICE permission",
-      "description": "Removes the android.permission.BIND_ACCESSIBILITY_SERVICE permission from the manifest. A system-signature permission no third-party app can ever be granted; declaring it only signals intent to use accessibility scraping — reading all screen content, keystrokes and notifications, the classic stalkerware pattern. Stripping the declaration keeps it inert.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BIND_DEVICE_ADMIN permission",
-      "description": "Removes the android.permission.BIND_DEVICE_ADMIN permission from the manifest. A system-signature permission no third-party app can ever be granted; declaring it only signals device-admin intent — remote lock, wipe and enforced policies, the MDM/stalkerware pattern. Stripping the declaration keeps it inert.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BIND_INPUT_METHOD permission",
-      "description": "Removes the android.permission.BIND_INPUT_METHOD permission from the manifest. A system-signature permission no third-party app can ever be granted; declaring it signals intent to host a keyboard — every keystroke in every app flows through an IME. Stripping the declaration keeps it inert.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BIND_NOTIFICATION_LISTENER_SERVICE permission",
-      "description": "Removes the android.permission.BIND_NOTIFICATION_LISTENER_SERVICE permission from the manifest. A system-signature permission no third-party app can ever be granted; declaring it signals intent to host a notification listener — reading every notification, including message contents and 2FA codes. The stalkerware staple; stripping the declaration keeps it inert.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BLUETOOTH permission",
-      "description": "Removes the android.permission.BLUETOOTH permission from the manifest. Legacy Bluetooth access (pre-Android 12): device discovery and scanning reveal nearby Bluetooth devices and their unique MAC addresses, which are used for fingerprinting and location. Apps that use Bluetooth accessories on Android 11 and older lose them.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BLUETOOTH_ADMIN permission",
-      "description": "Removes the android.permission.BLUETOOTH_ADMIN permission from the manifest. Legacy (pre-Android 12) Bluetooth admin: can initiate discovery and make your device discoverable — broadcasting presence over RF with no internet needed. Pairs with removing BLUETOOTH; Android 12+ uses the granular SCAN/CONNECT/ADVERTISE permissions instead.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BLUETOOTH_ADVERTISE permission",
-      "description": "Removes the android.permission.BLUETOOTH_ADVERTISE permission from the manifest. Broadcasts a presence beacon your device can be tracked by, advertising device identity over RF with no internet needed. Beacon-transmit apps lose the function.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BLUETOOTH_CONNECT permission",
-      "description": "Removes the android.permission.BLUETOOTH_CONNECT permission from the manifest. Opens a direct RF data link to nearby hardware — an exfiltration path that never touches the internet stack. Apps that talk to Bluetooth accessories lose them.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BLUETOOTH_SCAN permission",
-      "description": "Removes the android.permission.BLUETOOTH_SCAN permission from the manifest. Scans for nearby Bluetooth devices and beacons — a retail-tracker presence census that needs no internet to collect. Bluetooth device pairing flows lose discovery.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BODY_SENSORS permission",
-      "description": "Removes the android.permission.BODY_SENSORS permission from the manifest. Reads health signals such as heart rate where sensors exist. Watch and fitness apps need it; everything else rarely does.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove BODY_SENSORS_BACKGROUND permission",
-      "description": "Removes the android.permission.BODY_SENSORS_BACKGROUND permission from the manifest. Grants continuous background body-sensor reads with no visible app use — the silent variant of BODY_SENSORS. Only health apps with background monitoring declare it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove CALL_PHONE permission",
-      "description": "Removes the android.permission.CALL_PHONE permission from the manifest. Lets the app place calls directly without opening the dialer. It is granted automatically at install with no prompt, so stripping the declaration stops any silent dialing (premium-rate fraud, tracking callbacks). Calls placed through the dialer UI are unaffected.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove CAMERA permission",
-      "description": "Removes the android.permission.CAMERA permission from the manifest. Grants the camera: capture of faces, documents, screens and surroundings works fully offline and can be exfiltrated later. Camera and QR-scanning apps need it; almost nothing else does.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove DETECT_SCREEN_CAPTURE permission",
-      "description": "Removes the android.permission.DETECT_SCREEN_CAPTURE permission from the manifest. Android 15+: lets the app detect when you take a screenshot — banking apps scold you, surveillance apps learn that evidence is being collected. Removing it makes your screenshots silent.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove FOREGROUND_SERVICE_CAMERA permission",
-      "description": "Removes the android.permission.FOREGROUND_SERVICE_CAMERA permission from the manifest. Android 14+ install-time grant for camera-type foreground services — a service context that keeps camera capture running behind a persistent-process notification. Camera apps need it; removing it blocks service-context capture for everything else.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove FOREGROUND_SERVICE_LOCATION permission",
-      "description": "Removes the android.permission.FOREGROUND_SERVICE_LOCATION permission from the manifest. Android 14+ install-time grant for location-type foreground services — continuous background location behind a persistent-process notification. Navigation and fitness-tracker apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove FOREGROUND_SERVICE_MICROPHONE permission",
-      "description": "Removes the android.permission.FOREGROUND_SERVICE_MICROPHONE permission from the manifest. Android 14+ install-time grant for microphone-type foreground services — background-capable audio capture behind a persistent-process notification. Recorder and call apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove GET_ACCOUNTS permission",
-      "description": "Removes the android.permission.GET_ACCOUNTS permission from the manifest. Enumerates on-device accounts for cross-service identity linkage. Deprecated and mostly inert on modern Android — stripping it is pure hardening.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
+      "options": [
+        {
+          "key": "stripTaskAffinity",
+          "title": "Clear task affinity",
+          "description": "Sets android:taskAffinity to empty on the application element — nothing left for a malicious app to clone.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripTaskReparenting",
+          "title": "Disable task re-parenting",
+          "description": "Sets allowTaskReparenting=false on the application element and on every activity that declared it — the mechanism StrandHogg 2.0 used.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "forceSingleTaskLauncher",
+          "title": "Force launcher singleTask",
+          "description": "Sets launchMode=singleTask on launcher activities, pinning the app's root so no other activity can share its task. The highest-impact toggle of the three on app behavior.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        }
+      ]
     },
     {
       "name": "Remove GMS permissions",
-      "description": "Strips the Google Play-defined permission declarations from the manifest: advertising ID, Play Billing, install referrer attribution, push (C2DM/FCM) and Google Services Framework sync. Inert on devices without Google Play; on Play devices it kills attribution, billing, push and ad-ID reads. All removals are on by default — open the patch options (gear) to deselect specific ones.",
+      "description": "Strips the Google Play-defined permission declarations from the manifest: advertising ID, Play Billing, legacy license checks, install referrer attribution, push (C2DM), legacy account auth scopes, legacy activity recognition and Google Services Framework sync. Inert on devices without Google Play; on Play devices it kills the matching capability. All removals are on by default — open the patch options (gear) to deselect specific ones.",
       "default": false,
       "category": null,
       "dependencies": [],
@@ -503,6 +377,15 @@
           "values": null
         },
         {
+          "key": "stripCheckLicense",
+          "title": "Remove CHECK_LICENSE (Play Licensing)",
+          "description": "The legacy License Verification Library gate, still declared by old paid apps. On Play devices a stripped declaration makes the license check throw — the wall that unlock patches replace. Inert without Play.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
           "key": "stripInstallReferrer",
           "title": "Remove BIND_GET_INSTALL_REFERRER_SERVICE",
           "description": "Play Install Referrer API: the campaign and attribution token that matches installs to ad clicks.",
@@ -513,8 +396,17 @@
         },
         {
           "key": "stripPush",
-          "title": "Remove C2DM RECEIVE (push)",
-          "description": "GCM/FCM push delivery. On devices with Play — including GrapheneOS's sandboxed Play Services — removal silences the app's push notifications.",
+          "title": "Remove C2DM permissions (push)",
+          "description": "GCM/FCM push delivery (com.google.android.c2dm.permission.RECEIVE) and the sender-side SEND permission. On devices with Play — including GrapheneOS's sandboxed Play Services — removal silences the app's push notifications.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripC2dMessage",
+          "title": "Remove C2D_MESSAGE (app-scoped push lock)",
+          "description": "The per-app signature permission from the classic GCM client setup (<package>.permission.C2D_MESSAGE) that locks registration to the app's signature. Pairs with push removal; the matching receiver declaration is left untouched.",
           "required": false,
           "type": "kotlin.Boolean",
           "default": true,
@@ -528,359 +420,244 @@
           "type": "kotlin.Boolean",
           "default": true,
           "values": null
+        },
+        {
+          "key": "stripLegacyActivityRecognition",
+          "title": "Remove legacy ACTIVITY_RECOGNITION (Google Play Services)",
+          "description": "The GMS-defined alias fitness apps declared before Android 10 — gait and motion profiling via play services. The modern platform ACTIVITY_RECOGNITION permission is covered by its own separate patch.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripGoogleAuth",
+          "title": "Remove GOOGLE_AUTH scopes (legacy account tokens)",
+          "description": "The pre-Firebase account auth-scope family (GOOGLE_AUTH and its service variants like GOOGLE_AUTH.writely, GOOGLE_AUTH.wise, GOOGLE_AUTH.ALL_SERVICES) — account-token gates held by the Google stack. Old Google-integrated apps may fail account flows on Play devices once stripped; test per app.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
         }
       ]
     },
     {
-      "name": "Remove INTERNET permission",
-      "description": "Removes the android.permission.INTERNET permission from the manifest. Blocks every socket the app opens, so bundled ad, analytics and telemetry SDKs cannot phone home. Also disables any legitimate online features — only enable for apps you want fully offline.",
+      "name": "Remove privacy permissions",
+      "description": "Strips privacy-invasive permission declarations from the manifest across 19 categories — camera, microphone, location, contacts, calendar, SMS, phone, nearby radios, network state, internet, sensors, media, notifications, special access, surveillance declarations, persistence, health, advertising and screenshot detection. Install-time permissions are never granted; runtime permissions are auto-denied with no dialog. All categories are on by default — open the patch options (gear) to deselect the ones the app legitimately needs.",
       "default": false,
       "category": null,
       "dependencies": [],
       "compatiblePackages": null,
-      "options": []
+      "options": [
+        {
+          "key": "stripCamera",
+          "title": "Remove camera access",
+          "description": "Strips CAMERA and FOREGROUND_SERVICE_CAMERA: capture of faces, documents and surroundings — including service-context capture — recorded offline for later exfiltration. Camera and QR apps lose capture.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripMicrophone",
+          "title": "Remove microphone access",
+          "description": "Strips RECORD_AUDIO and FOREGROUND_SERVICE_MICROPHONE: ambient eavesdropping and long background capture — the stalkerware staple. Recorder, call and voice apps lose input.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripLocation",
+          "title": "Remove location access",
+          "description": "Strips ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_BACKGROUND_LOCATION and FOREGROUND_SERVICE_LOCATION: a GNSS pattern-of-life trail that works fully offline. Maps, navigation and fitness trackers break.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripContactsAccounts",
+          "title": "Remove contacts & accounts access",
+          "description": "Strips READ_CONTACTS, WRITE_CONTACTS and GET_ACCOUNTS: your full social graph plus on-device account linkage. Messaging apps lose contact names; contact-swap integrity attacks go with WRITE.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripCalendar",
+          "title": "Remove calendar access",
+          "description": "Strips READ_CALENDAR and WRITE_CALENDAR: schedules, attendees, meeting links and locations harvested offline, plus phantom-event injection into the trusted Calendar UI. Calendar apps lose access.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripSmsMms",
+          "title": "Remove SMS & MMS access",
+          "description": "Strips SEND_SMS, READ_SMS, RECEIVE_SMS, RECEIVE_MMS and RECEIVE_WAP_PUSH: premium-SMS billing fraud (carrier-billed, never touches the internet), OTP interception and the carrier provisioning push channel. Default SMS apps break.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripPhoneCalls",
+          "title": "Remove phone & call access",
+          "description": "Strips CALL_PHONE, READ_PHONE_STATE, READ_PHONE_NUMBERS, ANSWER_PHONE_CALLS, READ_CALL_LOG, WRITE_CALL_LOG and USE_SIP: silent dialing fraud, identity correlation, call-hijack and call-record tampering. Dialers and messengers break.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripNearbyRadios",
+          "title": "Remove nearby radios (Bluetooth, UWB, NFC)",
+          "description": "Strips BLUETOOTH, BLUETOOTH_ADMIN, BLUETOOTH_SCAN, BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE, UWB_RANGING, NEARBY_WIFI_DEVICES and NFC: beacon presence mapping, discoverability and direct RF exfiltration links — all offline-capable. Accessory, wallet and casting apps break.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripNetworkState",
+          "title": "Remove network & Wi-Fi state access",
+          "description": "Strips ACCESS_WIFI_STATE, ACCESS_NETWORK_STATE and ACCESS_LOCAL_NETWORK: Wi-Fi network identity and BSSID geolocation, VPN detection by ad SDKs, and LAN device inventory. Download managers may misbehave.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripInternet",
+          "title": "Remove internet access",
+          "description": "Strips INTERNET: blocks every socket, so bundled ad, analytics and telemetry SDKs cannot phone home. Only keep this on for apps you want fully offline — every online feature dies with it.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripSensors",
+          "title": "Remove sensor & motion access",
+          "description": "Strips OTHER_SENSORS, ACTIVITY_RECOGNITION, BODY_SENSORS and BODY_SENSORS_BACKGROUND: motion and health signals used for activity inference, tap logging, gait profiling and device fingerprinting. Fitness apps break.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripMediaStorage",
+          "title": "Remove media & storage access",
+          "description": "Strips READ_MEDIA_IMAGES/VIDEO/AUDIO, READ_MEDIA_VISUAL_USER_SELECTED, ACCESS_MEDIA_LOCATION, READ_EXTERNAL_STORAGE and WRITE_EXTERNAL_STORAGE: your entire media library including PII screenshots, EXIF GPS location history and legacy shared-storage integrity. Gallery and camera apps break.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripNotifications",
+          "title": "Remove notification posting",
+          "description": "Strips POST_NOTIFICATIONS: the lure and phishing delivery channel into your notification shade. Apps go quiet — that is the point.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripSpecialAccess",
+          "title": "Remove special-access grant gates",
+          "description": "Strips PACKAGE_USAGE_STATS, SYSTEM_ALERT_WINDOW, MANAGE_EXTERNAL_STORAGE, MANAGE_MEDIA, REQUEST_INSTALL_PACKAGES and WRITE_SETTINGS: the Settings-grant screens for usage-history surveillance, overlay tapjacking, all-files access, the dropper channel and settings hijacking. File managers and installers break.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripSurveillanceDeclarations",
+          "title": "Remove surveillance service declarations (BIND_*)",
+          "description": "Strips BIND_ACCESSIBILITY_SERVICE, BIND_DEVICE_ADMIN, BIND_NOTIFICATION_LISTENER_SERVICE and BIND_INPUT_METHOD: system-signature declarations no third-party app can hold — the stalkerware and keylogger intent markers. Inert hardening.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripPersistenceWakeups",
+          "title": "Remove background persistence & wakeups",
+          "description": "Strips RECEIVE_BOOT_COMPLETED, WAKE_LOCK, SCHEDULE_EXACT_ALARM and USE_EXACT_ALARM: boot auto-start, CPU hold and precise periodic wakeups — the backbone of always-on background telemetry. Alarm, launcher, messenger and media apps may break.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripHealthData",
+          "title": "Remove Health Connect access",
+          "description": "Strips health.READ_HEALTH_DATA_IN_BACKGROUND and health.READ_HEALTH_DATA_HISTORY: background health reads granted without a separate prompt, and history reaching back before the app was installed. Fitness dashboards break.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripAds",
+          "title": "Remove ad & Privacy Sandbox permissions",
+          "description": "Strips ACCESS_ADSERVICES_TOPICS, ACCESS_AD_SERVICES_AD_ID and ACCESS_ADSERVICES_ATTRIBUTION: interest-profile reads, the ad identifier and cross-app attribution measurement.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "stripScreenshotDetection",
+          "title": "Remove screenshot detection",
+          "description": "Strips DETECT_SCREEN_CAPTURE: the app can no longer detect your screenshots — banking scolding and surveillance-evidence detection go away. Your captures become silent.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        }
+      ]
     },
     {
-      "name": "Remove MANAGE_EXTERNAL_STORAGE permission",
-      "description": "Removes the android.permission.MANAGE_EXTERNAL_STORAGE permission from the manifest. Unlocks the 'All files access' special grant — read and write over the entire shared storage: every app's documents, photos and downloads. Removing the declaration means the app can never obtain all-files access; file managers need it.",
+      "name": "Silence app logging",
+      "description": "Nops every logging call site — android.util.Log writers, System.out/err print and println, and Throwable.printStackTrace — so tokens, credentials and PII never reach the logcat ring buffer, where adb, bug reports and forensic capture read them. Bundled wrappers like Timber funnel through android.util.Log and are silenced transitively. Log-based debug features and in-app log viewers go empty — that is the point.",
       "default": false,
       "category": null,
       "dependencies": [],
       "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove MANAGE_MEDIA permission",
-      "description": "Removes the android.permission.MANAGE_MEDIA permission from the manifest. Unlocks the 'Media management' special grant — modify and delete all media on the device without per-item grants. Gallery apps use it for housekeeping; removing the declaration means the app can never obtain it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove NEARBY_WIFI_DEVICES permission",
-      "description": "Removes the android.permission.NEARBY_WIFI_DEVICES permission from the manifest. Wi-Fi Aware NAN peer links provide direct device-to-device data transfer with no internet and no access point at all. Casting and smart-home setup flows will degrade.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove NFC permission",
-      "description": "Removes the android.permission.NFC permission from the manifest. Install-time gate for the NFC radio — tag reads and short-range RF peer links that never touch the internet stack. Wallet and payment apps break; almost everything else never touches NFC.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove OTHER_SENSORS permission",
-      "description": "Removes the android.permission.OTHER_SENSORS permission from the manifest. Android 15+ access to the 'other' sensors: ambient sensors like the accelerometer and magnetometer enable activity inference, tap logging and device fingerprinting. Removing it blinds sensor-based tracking.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove PACKAGE_USAGE_STATS permission",
-      "description": "Removes the android.permission.PACKAGE_USAGE_STATS permission from the manifest. Apps declare this signature|appop permission to route you to the Usage Access screen in Settings — granting it hands over your full app-usage history: what you open, when, and for how long. The parental-control/stalkerware channel; stripping the declaration means the app can never receive the grant.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove POST_NOTIFICATIONS permission",
-      "description": "Removes the android.permission.POST_NOTIFICATIONS permission from the manifest. Grants a lure and phishing delivery channel into your notification shade — harvested credentials store offline for later use. Apps go quiet; that is the point.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_CALENDAR permission",
-      "description": "Removes the android.permission.READ_CALENDAR permission from the manifest. Reads schedules, meeting links, attendees and locations — rich metadata harvested offline for later exfiltration. Calendar apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_CALL_LOG permission",
-      "description": "Removes the android.permission.READ_CALL_LOG permission from the manifest. Reads your call history — a who-talks-to-whom graph captured offline for later exfiltration. Dialer apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_CONTACTS permission",
-      "description": "Removes the android.permission.READ_CONTACTS permission from the manifest. Reads your full social graph — names, numbers, emails, addresses and notes — captured offline for later exfiltration. Messaging apps need it for contact names.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_EXTERNAL_STORAGE permission",
-      "description": "Removes the android.permission.READ_EXTERNAL_STORAGE permission from the manifest. Legacy (API ≤32) shared-storage read, including other apps' Download dropboxes; modern builds migrate to READ_MEDIA_*. Removing it covers older targets.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_HEALTH_DATA_HISTORY permission",
-      "description": "Removes the android.permission.health.READ_HEALTH_DATA_HISTORY permission from the manifest. Health Connect history access: lets the app read health data from before it was ever installed — reaching back to history you never granted it. Removing it caps the app to data generated after install.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_HEALTH_DATA_IN_BACKGROUND permission",
-      "description": "Removes the android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND permission from the manifest. Health Connect background access: lets the app read your health data — steps, sleep, heart rate — while not in use, granted silently alongside other grants with no separate prompt. Fitness dashboards break; background health surveillance does not.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_MEDIA_AUDIO permission",
-      "description": "Removes the android.permission.READ_MEDIA_AUDIO permission from the manifest. Reads voice notes and recordings offline for later exfiltration. Music and recorder apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_MEDIA_IMAGES permission",
-      "description": "Removes the android.permission.READ_MEDIA_IMAGES permission from the manifest. Reads your entire photo library — including screenshots with PII, bank pages and documents — captured offline for later exfiltration. Gallery and camera apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_MEDIA_VIDEO permission",
-      "description": "Removes the android.permission.READ_MEDIA_VIDEO permission from the manifest. Reads your entire video library offline for later exfiltration. Gallery and camera apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_MEDIA_VISUAL_USER_SELECTED permission",
-      "description": "Removes the android.permission.READ_MEDIA_VISUAL_USER_SELECTED permission from the manifest. Reads the specific media items you granted in the partial-photo-access flow; removing it revokes even that bounded grant.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_PHONE_NUMBERS permission",
-      "description": "Removes the android.permission.READ_PHONE_NUMBERS permission from the manifest. Exposes your phone number for identity linkage and SIM-swap prep. Dialer and SMS apps need it; others rarely do.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_PHONE_STATE permission",
-      "description": "Removes the android.permission.READ_PHONE_STATE permission from the manifest. Exposes phone identifiers and call state for identity correlation, harvested offline. Removing it breaks some legacy analytics SDKs by design.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove READ_SMS permission",
-      "description": "Removes the android.permission.READ_SMS permission from the manifest. Reads message content, including bank and 2FA codes, harvested offline for later exfiltration. Default SMS apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove RECEIVE_BOOT_COMPLETED permission",
-      "description": "Removes the android.permission.RECEIVE_BOOT_COMPLETED permission from the manifest. Granted at install with no prompt: the app auto-starts on every boot — the persistence backbone of always-on background telemetry. Alarm, launcher and messenger apps need it; decide per app.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove RECEIVE_MMS permission",
-      "description": "Removes the android.permission.RECEIVE_MMS permission from the manifest. Auto-retrieves MMS payloads — a media-parser attack surface that arrives on the radio path with no internet involved. Default SMS apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove RECEIVE_SMS permission",
-      "description": "Removes the android.permission.RECEIVE_SMS permission from the manifest. Lets the app intercept incoming messages — including OTP codes — the moment they arrive. Default SMS apps need it; nothing else should have it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove RECEIVE_WAP_PUSH permission",
-      "description": "Removes the android.permission.RECEIVE_WAP_PUSH permission from the manifest. Receives carrier OMA provisioning and configuration pushes — a silent configuration channel on the radio path that never touches the internet. Almost no legitimate app should declare it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove RECORD_AUDIO permission",
-      "description": "Removes the android.permission.RECORD_AUDIO permission from the manifest. Grants the microphone: ambient eavesdropping and long background capture — the stalkerware staple. Audio records to disk offline for later exfiltration; voice apps lose input.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove REQUEST_INSTALL_PACKAGES permission",
-      "description": "Removes the android.permission.REQUEST_INSTALL_PACKAGES permission from the manifest. Unlocks the 'Install unknown apps' special grant — the dropper channel: silently self-update and sideload further APKs outside any store. Removing the declaration means the app can never request installing unknown apps; APK installers obviously need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove SCHEDULE_EXACT_ALARM permission",
-      "description": "Removes the android.permission.SCHEDULE_EXACT_ALARM permission from the manifest. Granted at install: precise scheduled wakeups, the backbone of periodic background telemetry beacons. Android 14+ gates it behind a Settings toggle — this removes the capability entirely. Alarm and calendar apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove SEND_SMS permission",
-      "description": "Removes the android.permission.SEND_SMS permission from the manifest. The classic premium-SMS billing fraud channel — monetizes through carrier billing and never touches the internet stack at all. Messaging apps lose in-app sending; they can still share to your SMS app.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove SYSTEM_ALERT_WINDOW permission",
-      "description": "Removes the android.permission.SYSTEM_ALERT_WINDOW permission from the manifest. Unlocks the 'Display over other apps' special grant: overlays drawn on top of other apps enable tapjacking, fake-dialog phishing and ad spam. Removing the declaration means the app can never obtain overlay access.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove USE_EXACT_ALARM permission",
-      "description": "Removes the android.permission.USE_EXACT_ALARM permission from the manifest. Granted at install and non-revocable in Settings (normal permissions never show a revoke button): Play policy limits it to alarm and calendar apps, but junk apps declare it to bypass the exact-alarm controls entirely. Removal is the only way to revoke it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove USE_SIP permission",
-      "description": "Removes the android.permission.USE_SIP permission from the manifest. Internet telephony. Deprecated and fully neutralized once INTERNET is removed — stripping it hardens against a future re-grant.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove UWB_RANGING permission",
-      "description": "Removes the android.permission.UWB_RANGING permission from the manifest. Ultra-wideband fine-ranging enables precise proximity and motion analytics with nearby devices, collected fully offline. Digital-key and tracker-tag apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove WAKE_LOCK permission",
-      "description": "Removes the android.permission.WAKE_LOCK permission from the manifest. Granted at install with no prompt: lets the app hold the CPU awake — the enabler of unbounded background processing and periodic telemetry beacons, at the cost of battery. Media and download apps need it.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove WRITE_CALENDAR permission",
-      "description": "Removes the android.permission.WRITE_CALENDAR permission from the manifest. Integrity attack vector: injects phantom events with attacker links into the trusted Calendar UI, executed entirely offline. Calendar apps lose write access.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove WRITE_CALL_LOG permission",
-      "description": "Removes the android.permission.WRITE_CALL_LOG permission from the manifest. Integrity attack vector: edits or deletes call records to cover an abuser's tracks, executed entirely offline. Dialer apps lose write access.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove WRITE_CONTACTS permission",
-      "description": "Removes the android.permission.WRITE_CONTACTS permission from the manifest. Integrity attack vector: can swap bank and support contacts for attacker numbers, executed entirely offline with no network needed. Contact-management apps lose write access.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove WRITE_EXTERNAL_STORAGE permission",
-      "description": "Removes the android.permission.WRITE_EXTERNAL_STORAGE permission from the manifest. Legacy (API ≤32) shared-storage write — an integrity surface over every app's Downloads area. Modern targets no longer use it; stripping it covers older apps.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
-    },
-    {
-      "name": "Remove WRITE_SETTINGS permission",
-      "description": "Removes the android.permission.WRITE_SETTINGS permission from the manifest. Unlocks the 'Modify system settings' special grant — an integrity surface over ringtone, do-not-disturb and default-app configuration, the junk-app settings-hijack channel. Removing the declaration means the app can never obtain write access to system settings.",
-      "default": false,
-      "category": null,
-      "dependencies": [],
-      "compatiblePackages": null,
-      "options": []
+      "options": [
+        {
+          "key": "silenceAndroidLog",
+          "title": "Silence android.util.Log",
+          "description": "Nop all Log.v/d/i/w/e/wtf/println call sites — every overload, including format-string and throwable variants.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        },
+        {
+          "key": "silenceSystemStreams",
+          "title": "Silence System.out / System.err",
+          "description": "Nop all PrintStream print/println call sites. Default is false: this rewrites every PrintStream call site, not only System.out/err — an app writing text files through PrintStream.println would lose those writes.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": false,
+          "values": null
+        },
+        {
+          "key": "silenceStackTraces",
+          "title": "Silence printStackTrace",
+          "description": "Nop Throwable.printStackTrace call sites — exception messages often carry the very secret being handled when the error occurred.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": true,
+          "values": null
+        }
+      ]
     },
     {
       "name": "Unlock Premium",

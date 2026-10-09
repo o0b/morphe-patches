@@ -1,3 +1,9 @@
+## [1.6.0](https://github.com/o0b/morphe-patches/compare/v1.5.0...v1.6.0) (2026-10-09)
+
+### ✨ New Features
+
+* IPC Guard ([bb7c52e](https://github.com/o0b/morphe-patches/commit/bb7c52ed16dedd3e5d1e67cfa84519b92d209a5d))
+
 ## [1.5.0](https://github.com/o0b/morphe-patches/compare/v1.4.0...v1.5.0) (2026-10-09)
 
 ### ✨ New Features
