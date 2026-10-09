@@ -40,13 +40,14 @@ private fun stripSelectedPermissions(doc: Document, blocked: Set<String>): Int {
     return toRemove.size
 }
 
-// ─── Camera ───
+// ─── Camera & flashlight ───
 
 @Suppress("unused")
 val removeCameraPermissionsPatch = resourcePatch(
-    name = "Remove camera permissions",
-    description = "Strips the app's camera permission declarations, capture included. All " +
-        "removals are on by default — open the patch options (gear) to keep specific ones.",
+    name = "Remove camera & flashlight permissions",
+    description = "Strips the app's camera and flashlight permission declarations, capture " +
+        "included. All removals are on by default — open the patch options (gear) to keep " +
+        "specific ones.",
     default = false, // universal patches must be default false, the patcher warns otherwise
 ) {
     val stripCamera by booleanOption(
@@ -65,26 +66,37 @@ val removeCameraPermissionsPatch = resourcePatch(
             "notification.",
     )
 
+    val stripFlashlight by booleanOption(
+        key = "stripFlashlight",
+        default = true,
+        title = "FLASHLIGHT",
+        description = "Legacy normal permission, deprecated since Android 6 — the modern torch " +
+            "(setTorchMode) needs no permission, so the declaration is dead weight; stripping " +
+            "is hygiene. Apps that branch on the permission check may hide their own torch " +
+            "button.",
+    )
+
     execute {
         val blocked = mutableSetOf<String>()
         if (stripCamera ?: true) blocked.add("android.permission.CAMERA")
         if (stripFgsCamera ?: true) blocked.add("android.permission.FOREGROUND_SERVICE_CAMERA")
-        if (blocked.isEmpty()) { println("[Remove camera permissions] Skipped: no permissions selected."); return@execute }
+        if (stripFlashlight ?: true) blocked.add("android.permission.FLASHLIGHT")
+        if (blocked.isEmpty()) { println("[Remove camera & flashlight permissions] Skipped: no permissions selected."); return@execute }
 
         var removed = 0
         document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
-        println("[Remove camera permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+        println("[Remove camera & flashlight permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
     }
 }
 
-// ─── Microphone ───
+// ─── Microphone & audio state ───
 
 @Suppress("unused")
 val removeMicrophonePermissionsPatch = resourcePatch(
-    name = "Remove microphone permissions",
-    description = "Strips the app's microphone permission declarations, service-context " +
-        "capture included. All removals are on by default — open the patch options (gear) to " +
-        "keep specific ones.",
+    name = "Remove microphone & audio permissions",
+    description = "Strips the app's audio declarations — microphone capture, service-context " +
+        "capture, and global audio-state modification. All removals are on by default — " +
+        "open the patch options (gear) to keep specific ones.",
     default = false, // universal patches must be default false, the patcher warns otherwise
 ) {
     val stripRecordAudio by booleanOption(
@@ -102,15 +114,25 @@ val removeMicrophonePermissionsPatch = resourcePatch(
             "persistent-process notification.",
     )
 
+    val stripModifyAudioSettings by booleanOption(
+        key = "stripModifyAudioSettings",
+        default = true,
+        title = "MODIFY_AUDIO_SETTINGS",
+        description = "Granted at install with no prompt: the app can modify global audio " +
+            "state — volume, ringer mode and audio routing during calls. An integrity surface " +
+            "over the device's audio configuration; call and voice apps lose their adjustments.",
+    )
+
     execute {
         val blocked = mutableSetOf<String>()
         if (stripRecordAudio ?: true) blocked.add("android.permission.RECORD_AUDIO")
         if (stripFgsMicrophone ?: true) blocked.add("android.permission.FOREGROUND_SERVICE_MICROPHONE")
-        if (blocked.isEmpty()) { println("[Remove microphone permissions] Skipped: no permissions selected."); return@execute }
+        if (stripModifyAudioSettings ?: true) blocked.add("android.permission.MODIFY_AUDIO_SETTINGS")
+        if (blocked.isEmpty()) { println("[Remove microphone & audio permissions] Skipped: no permissions selected."); return@execute }
 
         var removed = 0
         document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
-        println("[Remove microphone permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+        println("[Remove microphone & audio permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
     }
 }
 
@@ -996,5 +1018,29 @@ val removeScreenshotDetectionPermissionPatch = resourcePatch(
             removed = stripSelectedPermissions(doc, setOf("android.permission.DETECT_SCREEN_CAPTURE"))
         }
         println("[Remove screenshot detection permission] Stripped $removed DETECT_SCREEN_CAPTURE declaration(s).")
+    }
+}
+
+// ─── Silent downloads (single permission — no gear) ───
+
+@Suppress("unused")
+val removeSilentDownloadPermissionPatch = resourcePatch(
+    name = "Remove silent download permission",
+    description = "Removes android.permission.DOWNLOAD_WITHOUT_NOTIFICATION — the grant apps " +
+        "declare to run DownloadManager transfers with hidden visibility, so payload pulls " +
+        "(including dropper self-updates) happen with no visible notification. Once stripped, a " +
+        "hidden download request fails loudly at enqueue (SecurityException: Invalid value for " +
+        "visibility: 2) instead of hiding — the transfer can no longer be invisible. Pairs with " +
+        "the REQUEST_INSTALL_PACKAGES toggle in the special-access patch; apps that legitimately " +
+        "download quietly in the background (e.g. podcast auto-updates) will surface " +
+        "notifications or fail at the attempt — smoke test per app.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    execute {
+        var removed = 0
+        document("AndroidManifest.xml").use { doc ->
+            removed = stripSelectedPermissions(doc, setOf("android.permission.DOWNLOAD_WITHOUT_NOTIFICATION"))
+        }
+        println("[Remove silent download permission] Stripped $removed DOWNLOAD_WITHOUT_NOTIFICATION declaration(s).")
     }
 }
