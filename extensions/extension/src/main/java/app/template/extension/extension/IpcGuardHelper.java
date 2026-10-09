@@ -15,7 +15,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
-import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import java.io.InputStream;
@@ -32,10 +31,10 @@ import java.util.Set;
  * traffic passes through untouched; the patch-option allowlist is the
  * escape hatch; everything else is dropped with a logcat line.
  *
- * The own package is captured lazily from any Context that flows through a
- * guard call (plus eagerly from the injected init() at attachBaseContext),
- * so a missed injection point degrades gracefully instead of blocking the
- * app's own navigation.
+ * API discipline (learned from the failed build): only signatures the
+ * compile SDK actually provides are used — registerReceiver delegates via
+ * the API-26 flags overload (RECEIVER_NOT_EXPORTED on 33+, 0 below);
+ * PendingIntent's only 5-arg form is getActivity(..., Bundle options).
  */
 public final class IpcGuardHelper {
 
@@ -187,29 +186,17 @@ public final class IpcGuardHelper {
     }
 
     // ─── Module C: receiver lockdown ───
+    // Only the plain (receiver, filter) call sites are rewritten — the
+    // perm/handler overloads were removed from the compile SDK, and silently
+    // dropping a receiver's broadcast permission would be a security
+    // regression, so those rare call sites stay unguarded.
+    // ponytail: API < 26 lacks the flags overload — registration is skipped
+    // there; modern-device patch set.
 
     public static BroadcastReceiver registerReceiver(Context context, BroadcastReceiver receiver, IntentFilter filter) {
-        if (context == null) return null;
-        if (Build.VERSION.SDK_INT >= 33) {
-            return context.registerReceiver(receiver, filter, null, null, Context.RECEIVER_NOT_EXPORTED);
-        }
-        return context.registerReceiver(receiver, filter);
-    }
-
-    public static BroadcastReceiver registerReceiver(Context context, BroadcastReceiver receiver, IntentFilter filter, String broadcastPermission) {
-        if (context == null) return null;
-        if (Build.VERSION.SDK_INT >= 33) {
-            return context.registerReceiver(receiver, filter, broadcastPermission, null, Context.RECEIVER_NOT_EXPORTED);
-        }
-        return context.registerReceiver(receiver, filter, broadcastPermission);
-    }
-
-    public static BroadcastReceiver registerReceiver(Context context, BroadcastReceiver receiver, IntentFilter filter, String broadcastPermission, Handler handler) {
-        if (context == null) return null;
-        if (Build.VERSION.SDK_INT >= 33) {
-            return context.registerReceiver(receiver, filter, broadcastPermission, handler, Context.RECEIVER_NOT_EXPORTED);
-        }
-        return context.registerReceiver(receiver, filter, broadcastPermission, handler);
+        if (context == null || Build.VERSION.SDK_INT < 26) return null;
+        int flags = Build.VERSION.SDK_INT >= 33 ? Context.RECEIVER_NOT_EXPORTED : 0;
+        return context.registerReceiver(receiver, filter, flags);
     }
 
     // ─── Module B: content provider severance ───
@@ -217,11 +204,6 @@ public final class IpcGuardHelper {
     public static Cursor query(ContentResolver cr, Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         if (!uriAllowed(uri)) { drop("query", String.valueOf(uri)); return null; }
         return cr.query(uri, projection, selection, selectionArgs, sortOrder);
-    }
-
-    public static Cursor query(ContentResolver cr, Uri uri) {
-        if (!uriAllowed(uri)) { drop("query", String.valueOf(uri)); return null; }
-        return cr.query(uri);
     }
 
     public static Cursor query(ContentResolver cr, Uri uri, String[] projection, Bundle queryArgs, CancellationSignal cancellationSignal) {
@@ -285,6 +267,9 @@ public final class IpcGuardHelper {
     }
 
     // ─── Module E: PendingIntent de-weaponization ───
+    // The only 5-arg form in the SDK is getActivity(..., Bundle options);
+    // getBroadcast/getService/getForegroundService have no 5-arg overload —
+    // those call sites (if any) stay unguarded.
     // ponytail: blocked targets become self-targeted no-op PendingIntents —
     // an in-app interstitial Activity showing the destination is the upgrade path.
 
@@ -292,31 +277,19 @@ public final class IpcGuardHelper {
         return PendingIntent.getActivity(context, requestCode, sanitizePendingIntent(context, intent), flags);
     }
 
-    public static PendingIntent getActivity(Context context, int requestCode, Intent intent, int flags, Handler handler) {
-        return PendingIntent.getActivity(context, requestCode, sanitizePendingIntent(context, intent), flags, handler);
+    public static PendingIntent getActivity(Context context, int requestCode, Intent intent, int flags, Bundle options) {
+        return PendingIntent.getActivity(context, requestCode, sanitizePendingIntent(context, intent), flags, options);
     }
 
     public static PendingIntent getBroadcast(Context context, int requestCode, Intent intent, int flags) {
         return PendingIntent.getBroadcast(context, requestCode, sanitizePendingIntent(context, intent), flags);
     }
 
-    public static PendingIntent getBroadcast(Context context, int requestCode, Intent intent, int flags, Handler handler) {
-        return PendingIntent.getBroadcast(context, requestCode, sanitizePendingIntent(context, intent), flags, handler);
-    }
-
     public static PendingIntent getService(Context context, int requestCode, Intent intent, int flags) {
         return PendingIntent.getService(context, requestCode, sanitizePendingIntent(context, intent), flags);
     }
 
-    public static PendingIntent getService(Context context, int requestCode, Intent intent, int flags, Handler handler) {
-        return PendingIntent.getService(context, requestCode, sanitizePendingIntent(context, intent), flags, handler);
-    }
-
     public static PendingIntent getForegroundService(Context context, int requestCode, Intent intent, int flags) {
         return PendingIntent.getForegroundService(context, requestCode, sanitizePendingIntent(context, intent), flags);
-    }
-
-    public static PendingIntent getForegroundService(Context context, int requestCode, Intent intent, int flags, Handler handler) {
-        return PendingIntent.getForegroundService(context, requestCode, sanitizePendingIntent(context, intent), flags, handler);
     }
 }
