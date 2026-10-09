@@ -1,3 +1,9 @@
+## [1.6.1](https://github.com/o0b/morphe-patches/compare/v1.6.0...v1.6.1) (2026-10-09)
+
+### 🐛 Bug Fixes
+
+* WaveletPremiumPatch ([d1d7c9b](https://github.com/o0b/morphe-patches/commit/d1d7c9b97f2e4cc393d4d16939b9b9fb58acfe3b))
+
 ## [1.6.0](https://github.com/o0b/morphe-patches/compare/v1.5.0...v1.6.0) (2026-10-09)
 
 ### ✨ New Features

@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "patches": [
     {
       "name": "Disable Amazon IAP components",
@@ -233,6 +233,38 @@
           "values": null
         }
       ]
+    },
+    {
+      "name": "Disable telemetry",
+      "description": "Disables Firebase completely (init provider, analytics, Crashlytics, Remote Config wiring, install UUID), turns off the sale promo push notifications, and prevents Fyber's crash handler from installing at process start.",
+      "default": true,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.appgenix.bizcal",
+          "name": "Business Calendar 2",
+          "description": null,
+          "apkFileType": "APKS",
+          "appIconColor": "#D32F2F",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.55.6",
+              "versionCodes": {
+                "ARM64_V8A": 255601,
+                "ARMEABI_V7A": 255601,
+                "X86_64": 255601,
+                "X86": 255601
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
     },
     {
       "name": "IPC guard (cross-app exfil barrier)",
@@ -713,6 +745,38 @@
                 "ARMEABI_V7A": 81006,
                 "X86_64": 81006,
                 "X86": 81006
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Unlock Pro",
+      "description": "Unlocks Business Calendar 2 Pro by forcing the complete pro status and the force-pro override to return true, routing every feature gate to the full package (7) without touching billing.",
+      "default": true,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.appgenix.bizcal",
+          "name": "Business Calendar 2",
+          "description": null,
+          "apkFileType": "APKS",
+          "appIconColor": "#D32F2F",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.55.6",
+              "versionCodes": {
+                "ARM64_V8A": 255601,
+                "ARMEABI_V7A": 255601,
+                "X86_64": 255601,
+                "X86": 255601
               },
               "isExperimental": false,
               "minSdk": null,

@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-09T04:11:32",
-  "description": "## [1.6.0](https://github.com/o0b/morphe-patches/compare/v1.5.0...v1.6.0) (2026-10-09)\n\n### ✨ New Features\n\n* IPC Guard ([bb7c52e](https://github.com/o0b/morphe-patches/commit/bb7c52ed16dedd3e5d1e67cfa84519b92d209a5d))",
-  "download_url": "https://github.com/o0b/morphe-patches/releases/download/v1.6.0/patches-1.6.0.mpp",
+  "created_at": "2026-10-09T04:32:48",
+  "description": "## [1.6.1](https://github.com/o0b/morphe-patches/compare/v1.6.0...v1.6.1) (2026-10-09)\n\n### 🐛 Bug Fixes\n\n* WaveletPremiumPatch ([d1d7c9b](https://github.com/o0b/morphe-patches/commit/d1d7c9b97f2e4cc393d4d16939b9b9fb58acfe3b))",
+  "download_url": "https://github.com/o0b/morphe-patches/releases/download/v1.6.1/patches-1.6.1.mpp",
   "signature_download_url": "",
-  "version": "1.6.0"
+  "version": "1.6.1"
 }
