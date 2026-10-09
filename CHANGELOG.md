@@ -1,3 +1,9 @@
+## [1.7.0](https://github.com/o0b/morphe-patches/compare/v1.6.1...v1.7.0) (2026-10-09)
+
+### ✨ New Features
+
+* calendar widget ([e779966](https://github.com/o0b/morphe-patches/commit/e779966967d62b79b47b6b67386fbaa9e26094d3))
+
 ## [1.6.1](https://github.com/o0b/morphe-patches/compare/v1.6.0...v1.6.1) (2026-10-09)
 
 ### 🐛 Bug Fixes
