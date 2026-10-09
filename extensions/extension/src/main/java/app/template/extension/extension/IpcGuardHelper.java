@@ -31,10 +31,11 @@ import java.util.Set;
  * traffic passes through untouched; the patch-option allowlist is the
  * escape hatch; everything else is dropped with a logcat line.
  *
- * API discipline (learned from the failed build): only signatures the
+ * API discipline (learned from two failed builds): only signatures the
  * compile SDK actually provides are used — registerReceiver delegates via
- * the API-26 flags overload (RECEIVER_NOT_EXPORTED on 33+, 0 below);
- * PendingIntent's only 5-arg form is getActivity(..., Bundle options).
+ * the API-26 flags overload (RECEIVER_NOT_EXPORTED on 33+, 0 below) and
+ * returns the sticky Intent, matching the real API contract; PendingIntent's
+ * only 5-arg form is getActivity(..., Bundle options).
  */
 public final class IpcGuardHelper {
 
@@ -190,10 +191,12 @@ public final class IpcGuardHelper {
     // perm/handler overloads were removed from the compile SDK, and silently
     // dropping a receiver's broadcast permission would be a security
     // regression, so those rare call sites stay unguarded.
+    // Returns the sticky Intent per the real API contract; null means
+    // "no sticky broadcast", which is also what pre-26 callers see.
     // ponytail: API < 26 lacks the flags overload — registration is skipped
     // there; modern-device patch set.
 
-    public static BroadcastReceiver registerReceiver(Context context, BroadcastReceiver receiver, IntentFilter filter) {
+    public static Intent registerReceiver(Context context, BroadcastReceiver receiver, IntentFilter filter) {
         if (context == null || Build.VERSION.SDK_INT < 26) return null;
         int flags = Build.VERSION.SDK_INT >= 33 ? Context.RECEIVER_NOT_EXPORTED : 0;
         return context.registerReceiver(receiver, filter, flags);
