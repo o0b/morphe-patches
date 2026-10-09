@@ -1,6 +1,6 @@
 # o0b Patches
 
-Morphe patches 
+Morphe patches
 
 ## ❓ About
 
