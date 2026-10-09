@@ -4,12 +4,11 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.instructionsOrNull
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
-import app.morphe.patcher.patch.AccessFlags
-import app.morphe.patcher.patch.PatchException
-import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.booleanOption
+import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
+import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction35c
 import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction3rc
@@ -31,27 +30,30 @@ import org.w3c.dom.Element
  *   Module B — provider severance: ContentResolver query/insert/update/
  *   delete/call/open* call sites route through a URI authority allowlist
  *   (own package, platform authorities, user extras).
- *   Module C — receiver lockdown: registerReceiver call sites are rewritten
- *   to add RECEIVER_NOT_EXPORTED on API 33+.
+ *   Module C — receiver lockdown: the plain registerReceiver call sites are
+ *   rewritten to add RECEIVER_NOT_EXPORTED on API 33+. The target return
+ *   type is Intent — registerReceiver returns the sticky intent — and the
+ *   perm/handler overloads stay unguarded (their SDK removal means dropping
+ *   the broadcast-permission arg, a security regression).
  *   Module E — PendingIntent de-weaponization: getActivity/getBroadcast/
  *   getService/getForegroundService creation sites sanitize their intent —
  *   foreign targets become self-targeted no-ops so notification lures
- *   cannot reach other apps when the system fires the PendingIntent.
+ *   cannot reach other apps when the system fires the PendingIntent. The
+ *   only 5-arg form is getActivity(..., Bundle options).
  *   Module D — manifest sweep (baked in, NOT toggleable): providers with
  *   exported=true are unexported and grantUriPermissions=false, all
  *   <queries> visibility blocks are removed, and NFC HCE services
  *   (BIND_NFC_SERVICE) are removed. Blanket activity/receiver exported
  *   flips are deliberately NOT done — widgets, share targets and launcher
- *   activities are the deliberate-export surface; inbound receivers are
- *   handled at runtime by Module C.
+ *   activities are the deliberate-export surface.
  *
  * Injection points: policy init is injected at Application.attachBaseContext
- * (onCreate fallbacks), the same site every no-root instrumentation lineage
- * uses. The own package is also captured lazily from any Context that flows
- * through a guard, so a missed init point degrades gracefully.
+ * (onCreate fallbacks). The own package is also captured lazily from any
+ * Context that flows through a guard, so a missed init point degrades
+ * gracefully.
  *
  * ponytail ceilings: signature-based matching is blind to reflection
- * (Method.invoke), native/packed APKs; flagged and ContextCompat
+ * (Method.invoke), native and packed APKs; flagged and ContextCompat
  * registerReceiver overloads are respected, not overridden.
  */
 private const val HELPER = "Lapp/template/extension/extension/IpcGuardHelper;"
@@ -82,7 +84,6 @@ private val OUTBOUND_INTENT_TARGETS = listOf(
 
 private val CONTENT_RESOLVER_TARGETS = listOf(
     GuardTarget(RESOLVER, "query", "Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;", "Landroid/database/Cursor;", RESOLVER),
-    GuardTarget(RESOLVER, "query", "Landroid/net/Uri;", "Landroid/database/Cursor;", RESOLVER),
     GuardTarget(RESOLVER, "query", "Landroid/net/Uri;[Ljava/lang/String;Landroid/os/Bundle;Landroid/os/CancellationSignal;", "Landroid/database/Cursor;", RESOLVER),
     GuardTarget(RESOLVER, "insert", "Landroid/net/Uri;Landroid/content/ContentValues;", "Landroid/net/Uri;", RESOLVER),
     GuardTarget(RESOLVER, "update", "Landroid/net/Uri;Landroid/content/ContentValues;Ljava/lang/String;[Ljava/lang/String;", "I", RESOLVER),
@@ -97,21 +98,20 @@ private val CONTENT_RESOLVER_TARGETS = listOf(
     GuardTarget(RESOLVER, "openAssetFileDescriptor", "Landroid/net/Uri;Ljava/lang/String;Landroid/os/CancellationSignal;", "Landroid/content/res/AssetFileDescriptor;", RESOLVER),
 )
 
+// Only the plain (receiver, filter) call sites are rewritten — real call sites
+// return the sticky Intent, and the perm/handler overloads were removed from
+// the compile SDK (guarding them would mean dropping their broadcast
+// permission, a security regression).
 private val RECEIVER_TARGETS = listOf(
-    GuardTarget("Landroid/content/Context;", "registerReceiver", "Landroid/content/BroadcastReceiver;Landroid/content/IntentFilter;", "Landroid/content/BroadcastReceiver;", CONTEXT),
-    GuardTarget("Landroid/content/Context;", "registerReceiver", "Landroid/content/BroadcastReceiver;Landroid/content/IntentFilter;Ljava/lang/String;", "Landroid/content/BroadcastReceiver;", CONTEXT),
-    GuardTarget("Landroid/content/Context;", "registerReceiver", "Landroid/content/BroadcastReceiver;Landroid/content/IntentFilter;Ljava/lang/String;Landroid/os/Handler;", "Landroid/content/BroadcastReceiver;", CONTEXT),
+    GuardTarget("Landroid/content/Context;", "registerReceiver", "Landroid/content/BroadcastReceiver;Landroid/content/IntentFilter;", "Landroid/content/Intent;", CONTEXT),
 )
 
 private val PENDING_INTENT_TARGETS = listOf(
     GuardTarget("Landroid/app/PendingIntent;", "getActivity", "Landroid/content/Context;ILandroid/content/Intent;I", "Landroid/app/PendingIntent;", null),
-    GuardTarget("Landroid/app/PendingIntent;", "getActivity", "Landroid/content/Context;ILandroid/content/Intent;ILandroid/os/Handler;", "Landroid/app/PendingIntent;", null),
+    GuardTarget("Landroid/app/PendingIntent;", "getActivity", "Landroid/content/Context;ILandroid/content/Intent;ILandroid/os/Bundle;", "Landroid/app/PendingIntent;", null),
     GuardTarget("Landroid/app/PendingIntent;", "getBroadcast", "Landroid/content/Context;ILandroid/content/Intent;I", "Landroid/app/PendingIntent;", null),
-    GuardTarget("Landroid/app/PendingIntent;", "getBroadcast", "Landroid/content/Context;ILandroid/content/Intent;ILandroid/os/Handler;", "Landroid/app/PendingIntent;", null),
     GuardTarget("Landroid/app/PendingIntent;", "getService", "Landroid/content/Context;ILandroid/content/Intent;I", "Landroid/app/PendingIntent;", null),
-    GuardTarget("Landroid/app/PendingIntent;", "getService", "Landroid/content/Context;ILandroid/content/Intent;ILandroid/os/Handler;", "Landroid/app/PendingIntent;", null),
     GuardTarget("Landroid/app/PendingIntent;", "getForegroundService", "Landroid/content/Context;ILandroid/content/Intent;I", "Landroid/app/PendingIntent;", null),
-    GuardTarget("Landroid/app/PendingIntent;", "getForegroundService", "Landroid/content/Context;ILandroid/content/Intent;ILandroid/os/Handler;", "Landroid/app/PendingIntent;", null),
 )
 
 private val ipcGuardApplicationAttachFingerprint = Fingerprint(
