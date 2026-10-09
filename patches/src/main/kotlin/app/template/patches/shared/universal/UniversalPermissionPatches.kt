@@ -2,407 +2,999 @@ package app.template.patches.shared.universal
 
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.resourcePatch
+import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 
 /**
- * Universal "Remove privacy permissions" master patch.
- *
- * Modeled on kveld9's Universal Privacy Permissions Stripper pattern
- * (kveld9/kveld-morphe-patches, GPL-3.0): one master patch whose gear-dialog
- * boolean toggles each bundle a category of permissions. All toggles default
- * to true, so enabling the patch alone strips every selected category —
- * open the gear to deselect. Replaces the 69 individual per-permission
- * patches of this file; the removal walk is the collect-then-remove DOM
- * walk from the Doom/vomw "Remove internet permission" patch (lineage:
- * adobo → Morning-Entree → rushiranpise/morphe-patches).
+ * Universal permission-removal patches — one patch per category, one gear
+ * toggle per permission (all on by default), following the kveld9 gear
+ * pattern (kveld9/kveld-morphe-patches, GPL-3.0). Replaces the earlier
+ * single-master consolidation, which only allowed category-level control.
  *
  * Semantics per permission: install-time permissions are never granted once
  * stripped; runtime ("dangerous") permissions are auto-denied at request
- * time with no dialog — permanent user denial, applied at install. Special-
- * access declarations mean the app can never reach its Settings grant
- * state. All categories are no-ops on apps that declare nothing from them,
- * and only plain uses-permission tags are scanned — none of these
- * permissions appear in uses-permission-sdk-23/-m.
+ * time with no dialog — permanent user denial, applied at install.
+ * Special-access declarations mean the app can never reach its Settings
+ * grant state. All are no-ops on apps that declare nothing from the
+ * category, and only plain uses-permission tags are scanned — none of
+ * these permissions appear in uses-permission-sdk-23/-m.
  */
 
-private val CAMERA_PERMISSIONS = setOf(
-    "android.permission.CAMERA",
-    "android.permission.FOREGROUND_SERVICE_CAMERA",
-)
+/** The proven collect-then-remove walk, shared by all category patches. */
+private fun stripSelectedPermissions(doc: Document, blocked: Set<String>): Int {
+    val manifest = doc.getElementsByTagName("manifest").item(0)
+    val children = manifest.childNodes
+    val toRemove = mutableListOf<Node>()
 
-private val MICROPHONE_PERMISSIONS = setOf(
-    "android.permission.RECORD_AUDIO",
-    "android.permission.FOREGROUND_SERVICE_MICROPHONE",
-)
+    for (i in 0 until children.length) {
+        val node = children.item(i) as? Element ?: continue
+        if (node.tagName == "uses-permission" &&
+            node.getAttribute("android:name") in blocked
+        ) {
+            toRemove.add(node)
+        }
+    }
 
-private val LOCATION_PERMISSIONS = setOf(
-    "android.permission.ACCESS_FINE_LOCATION",
-    "android.permission.ACCESS_COARSE_LOCATION",
-    "android.permission.ACCESS_BACKGROUND_LOCATION",
-    "android.permission.FOREGROUND_SERVICE_LOCATION",
-)
+    toRemove.forEach { manifest.removeChild(it) }
+    return toRemove.size
+}
 
-private val CONTACTS_ACCOUNTS_PERMISSIONS = setOf(
-    "android.permission.READ_CONTACTS",
-    "android.permission.WRITE_CONTACTS",
-    "android.permission.GET_ACCOUNTS",
-)
-
-private val CALENDAR_PERMISSIONS = setOf(
-    "android.permission.READ_CALENDAR",
-    "android.permission.WRITE_CALENDAR",
-)
-
-private val SMS_MMS_PERMISSIONS = setOf(
-    "android.permission.SEND_SMS",
-    "android.permission.READ_SMS",
-    "android.permission.RECEIVE_SMS",
-    "android.permission.RECEIVE_MMS",
-    "android.permission.RECEIVE_WAP_PUSH",
-)
-
-private val PHONE_CALLS_PERMISSIONS = setOf(
-    "android.permission.CALL_PHONE",
-    "android.permission.READ_PHONE_STATE",
-    "android.permission.READ_PHONE_NUMBERS",
-    "android.permission.ANSWER_PHONE_CALLS",
-    "android.permission.READ_CALL_LOG",
-    "android.permission.WRITE_CALL_LOG",
-    "android.permission.USE_SIP",
-)
-
-private val NEARBY_RADIOS_PERMISSIONS = setOf(
-    "android.permission.BLUETOOTH",
-    "android.permission.BLUETOOTH_ADMIN",
-    "android.permission.BLUETOOTH_SCAN",
-    "android.permission.BLUETOOTH_CONNECT",
-    "android.permission.BLUETOOTH_ADVERTISE",
-    "android.permission.UWB_RANGING",
-    "android.permission.NEARBY_WIFI_DEVICES",
-    "android.permission.NFC",
-)
-
-private val NETWORK_STATE_PERMISSIONS = setOf(
-    "android.permission.ACCESS_WIFI_STATE",
-    "android.permission.ACCESS_NETWORK_STATE",
-    "android.permission.ACCESS_LOCAL_NETWORK",
-)
-
-private val INTERNET_PERMISSIONS = setOf(
-    "android.permission.INTERNET",
-)
-
-private val SENSORS_PERMISSIONS = setOf(
-    "android.permission.OTHER_SENSORS",
-    "android.permission.ACTIVITY_RECOGNITION",
-    "android.permission.BODY_SENSORS",
-    "android.permission.BODY_SENSORS_BACKGROUND",
-)
-
-private val MEDIA_STORAGE_PERMISSIONS = setOf(
-    "android.permission.READ_MEDIA_IMAGES",
-    "android.permission.READ_MEDIA_VIDEO",
-    "android.permission.READ_MEDIA_AUDIO",
-    "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-    "android.permission.ACCESS_MEDIA_LOCATION",
-    "android.permission.READ_EXTERNAL_STORAGE",
-    "android.permission.WRITE_EXTERNAL_STORAGE",
-)
-
-private val NOTIFICATION_PERMISSIONS = setOf(
-    "android.permission.POST_NOTIFICATIONS",
-)
-
-private val SPECIAL_ACCESS_PERMISSIONS = setOf(
-    "android.permission.PACKAGE_USAGE_STATS",
-    "android.permission.SYSTEM_ALERT_WINDOW",
-    "android.permission.MANAGE_EXTERNAL_STORAGE",
-    "android.permission.MANAGE_MEDIA",
-    "android.permission.REQUEST_INSTALL_PACKAGES",
-    "android.permission.WRITE_SETTINGS",
-)
-
-private val SURVEILLANCE_DECLARATION_PERMISSIONS = setOf(
-    "android.permission.BIND_ACCESSIBILITY_SERVICE",
-    "android.permission.BIND_DEVICE_ADMIN",
-    "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE",
-    "android.permission.BIND_INPUT_METHOD",
-)
-
-private val PERSISTENCE_WAKEUP_PERMISSIONS = setOf(
-    "android.permission.RECEIVE_BOOT_COMPLETED",
-    "android.permission.WAKE_LOCK",
-    "android.permission.SCHEDULE_EXACT_ALARM",
-    "android.permission.USE_EXACT_ALARM",
-)
-
-private val HEALTH_DATA_PERMISSIONS = setOf(
-    "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND",
-    "android.permission.health.READ_HEALTH_DATA_HISTORY",
-)
-
-private val AD_PERMISSIONS = setOf(
-    "android.permission.ACCESS_ADSERVICES_TOPICS",
-    "android.permission.ACCESS_AD_SERVICES_AD_ID",
-    "android.permission.ACCESS_ADSERVICES_ATTRIBUTION",
-)
-
-private val SCREENSHOT_DETECTION_PERMISSIONS = setOf(
-    "android.permission.DETECT_SCREEN_CAPTURE",
-)
+// ─── Camera ───
 
 @Suppress("unused")
-val removePrivacyPermissionsPatch = resourcePatch(
-    name = "Remove privacy permissions",
-    description = "Strips privacy-invasive permission declarations from the manifest across " +
-        "19 categories — camera, microphone, location, contacts, calendar, SMS, phone, " +
-        "nearby radios, network state, internet, sensors, media, notifications, special " +
-        "access, surveillance declarations, persistence, health, advertising and " +
-        "screenshot detection. Install-time permissions are never granted; runtime " +
-        "permissions are auto-denied with no dialog. All categories are on by default — " +
-        "open the patch options (gear) to deselect the ones the app legitimately needs.",
+val removeCameraPermissionsPatch = resourcePatch(
+    name = "Remove camera permissions",
+    description = "Strips the app's camera permission declarations, capture included. All " +
+        "removals are on by default — open the patch options (gear) to keep specific ones.",
     default = false, // universal patches must be default false, the patcher warns otherwise
 ) {
     val stripCamera by booleanOption(
         key = "stripCamera",
         default = true,
-        title = "Remove camera access",
-        description = "Strips CAMERA and FOREGROUND_SERVICE_CAMERA: capture of faces, " +
-            "documents and surroundings — including service-context capture — recorded " +
-            "offline for later exfiltration. Camera and QR apps lose capture.",
+        title = "CAMERA",
+        description = "Capture of faces, documents and surroundings — works fully offline for " +
+            "later exfiltration.",
     )
 
-    val stripMicrophone by booleanOption(
-        key = "stripMicrophone",
+    val stripFgsCamera by booleanOption(
+        key = "stripFgsCamera",
         default = true,
-        title = "Remove microphone access",
-        description = "Strips RECORD_AUDIO and FOREGROUND_SERVICE_MICROPHONE: ambient " +
-            "eavesdropping and long background capture — the stalkerware staple. " +
-            "Recorder, call and voice apps lose input.",
-    )
-
-    val stripLocation by booleanOption(
-        key = "stripLocation",
-        default = true,
-        title = "Remove location access",
-        description = "Strips ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, " +
-            "ACCESS_BACKGROUND_LOCATION and FOREGROUND_SERVICE_LOCATION: a GNSS " +
-            "pattern-of-life trail that works fully offline. Maps, navigation and " +
-            "fitness trackers break.",
-    )
-
-    val stripContactsAccounts by booleanOption(
-        key = "stripContactsAccounts",
-        default = true,
-        title = "Remove contacts & accounts access",
-        description = "Strips READ_CONTACTS, WRITE_CONTACTS and GET_ACCOUNTS: your full " +
-            "social graph plus on-device account linkage. Messaging apps lose contact " +
-            "names; contact-swap integrity attacks go with WRITE.",
-    )
-
-    val stripCalendar by booleanOption(
-        key = "stripCalendar",
-        default = true,
-        title = "Remove calendar access",
-        description = "Strips READ_CALENDAR and WRITE_CALENDAR: schedules, attendees, " +
-            "meeting links and locations harvested offline, plus phantom-event " +
-            "injection into the trusted Calendar UI. Calendar apps lose access.",
-    )
-
-    val stripSmsMms by booleanOption(
-        key = "stripSmsMms",
-        default = true,
-        title = "Remove SMS & MMS access",
-        description = "Strips SEND_SMS, READ_SMS, RECEIVE_SMS, RECEIVE_MMS and " +
-            "RECEIVE_WAP_PUSH: premium-SMS billing fraud (carrier-billed, never touches " +
-            "the internet), OTP interception and the carrier provisioning push channel. " +
-            "Default SMS apps break.",
-    )
-
-    val stripPhoneCalls by booleanOption(
-        key = "stripPhoneCalls",
-        default = true,
-        title = "Remove phone & call access",
-        description = "Strips CALL_PHONE, READ_PHONE_STATE, READ_PHONE_NUMBERS, " +
-            "ANSWER_PHONE_CALLS, READ_CALL_LOG, WRITE_CALL_LOG and USE_SIP: silent " +
-            "dialing fraud, identity correlation, call-hijack and call-record " +
-            "tampering. Dialers and messengers break.",
-    )
-
-    val stripNearbyRadios by booleanOption(
-        key = "stripNearbyRadios",
-        default = true,
-        title = "Remove nearby radios (Bluetooth, UWB, NFC)",
-        description = "Strips BLUETOOTH, BLUETOOTH_ADMIN, BLUETOOTH_SCAN, " +
-            "BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE, UWB_RANGING, NEARBY_WIFI_DEVICES " +
-            "and NFC: beacon presence mapping, discoverability and direct RF " +
-            "exfiltration links — all offline-capable. Accessory, wallet and casting " +
-            "apps break.",
-    )
-
-    val stripNetworkState by booleanOption(
-        key = "stripNetworkState",
-        default = true,
-        title = "Remove network & Wi-Fi state access",
-        description = "Strips ACCESS_WIFI_STATE, ACCESS_NETWORK_STATE and " +
-            "ACCESS_LOCAL_NETWORK: Wi-Fi network identity and BSSID geolocation, VPN " +
-            "detection by ad SDKs, and LAN device inventory. Download managers may " +
-            "misbehave.",
-    )
-
-    val stripInternet by booleanOption(
-        key = "stripInternet",
-        default = true,
-        title = "Remove internet access",
-        description = "Strips INTERNET: blocks every socket, so bundled ad, analytics " +
-            "and telemetry SDKs cannot phone home. Only keep this on for apps you want " +
-            "fully offline — every online feature dies with it.",
-    )
-
-    val stripSensors by booleanOption(
-        key = "stripSensors",
-        default = true,
-        title = "Remove sensor & motion access",
-        description = "Strips OTHER_SENSORS, ACTIVITY_RECOGNITION, BODY_SENSORS and " +
-            "BODY_SENSORS_BACKGROUND: motion and health signals used for activity " +
-            "inference, tap logging, gait profiling and device fingerprinting. " +
-            "Fitness apps break.",
-    )
-
-    val stripMediaStorage by booleanOption(
-        key = "stripMediaStorage",
-        default = true,
-        title = "Remove media & storage access",
-        description = "Strips READ_MEDIA_IMAGES/VIDEO/AUDIO, READ_MEDIA_VISUAL_USER_" +
-            "SELECTED, ACCESS_MEDIA_LOCATION, READ_EXTERNAL_STORAGE and WRITE_EXTERNAL_" +
-            "STORAGE: your entire media library including PII screenshots, EXIF GPS " +
-            "location history and legacy shared-storage integrity. Gallery and camera " +
-            "apps break.",
-    )
-
-    val stripNotifications by booleanOption(
-        key = "stripNotifications",
-        default = true,
-        title = "Remove notification posting",
-        description = "Strips POST_NOTIFICATIONS: the lure and phishing delivery channel " +
-            "into your notification shade. Apps go quiet — that is the point.",
-    )
-
-    val stripSpecialAccess by booleanOption(
-        key = "stripSpecialAccess",
-        default = true,
-        title = "Remove special-access grant gates",
-        description = "Strips PACKAGE_USAGE_STATS, SYSTEM_ALERT_WINDOW, MANAGE_EXTERNAL_" +
-            "STORAGE, MANAGE_MEDIA, REQUEST_INSTALL_PACKAGES and WRITE_SETTINGS: the " +
-            "Settings-grant screens for usage-history surveillance, overlay " +
-            "tapjacking, all-files access, the dropper channel and settings " +
-            "hijacking. File managers and installers break.",
-    )
-
-    val stripSurveillanceDeclarations by booleanOption(
-        key = "stripSurveillanceDeclarations",
-        default = true,
-        title = "Remove surveillance service declarations (BIND_*)",
-        description = "Strips BIND_ACCESSIBILITY_SERVICE, BIND_DEVICE_ADMIN, BIND_" +
-            "NOTIFICATION_LISTENER_SERVICE and BIND_INPUT_METHOD: system-signature " +
-            "declarations no third-party app can hold — the stalkerware and keylogger " +
-            "intent markers. Inert hardening.",
-    )
-
-    val stripPersistenceWakeups by booleanOption(
-        key = "stripPersistenceWakeups",
-        default = true,
-        title = "Remove background persistence & wakeups",
-        description = "Strips RECEIVE_BOOT_COMPLETED, WAKE_LOCK, SCHEDULE_EXACT_ALARM " +
-            "and USE_EXACT_ALARM: boot auto-start, CPU hold and precise periodic " +
-            "wakeups — the backbone of always-on background telemetry. Alarm, " +
-            "launcher, messenger and media apps may break.",
-    )
-
-    val stripHealthData by booleanOption(
-        key = "stripHealthData",
-        default = true,
-        title = "Remove Health Connect access",
-        description = "Strips health.READ_HEALTH_DATA_IN_BACKGROUND and health.READ_" +
-            "HEALTH_DATA_HISTORY: background health reads granted without a separate " +
-            "prompt, and history reaching back before the app was installed. " +
-            "Fitness dashboards break.",
-    )
-
-    val stripAds by booleanOption(
-        key = "stripAds",
-        default = true,
-        title = "Remove ad & Privacy Sandbox permissions",
-        description = "Strips ACCESS_ADSERVICES_TOPICS, ACCESS_AD_SERVICES_AD_ID and " +
-            "ACCESS_ADSERVICES_ATTRIBUTION: interest-profile reads, the ad identifier " +
-            "and cross-app attribution measurement.",
-    )
-
-    val stripScreenshotDetection by booleanOption(
-        key = "stripScreenshotDetection",
-        default = true,
-        title = "Remove screenshot detection",
-        description = "Strips DETECT_SCREEN_CAPTURE: the app can no longer detect your " +
-            "screenshots — banking scolding and surveillance-evidence detection go " +
-            "away. Your captures become silent.",
+        title = "FOREGROUND_SERVICE_CAMERA",
+        description = "Android 14+ service-context camera capture behind a persistent-process " +
+            "notification.",
     )
 
     execute {
         val blocked = mutableSetOf<String>()
-        if (stripCamera ?: true) blocked.addAll(CAMERA_PERMISSIONS)
-        if (stripMicrophone ?: true) blocked.addAll(MICROPHONE_PERMISSIONS)
-        if (stripLocation ?: true) blocked.addAll(LOCATION_PERMISSIONS)
-        if (stripContactsAccounts ?: true) blocked.addAll(CONTACTS_ACCOUNTS_PERMISSIONS)
-        if (stripCalendar ?: true) blocked.addAll(CALENDAR_PERMISSIONS)
-        if (stripSmsMms ?: true) blocked.addAll(SMS_MMS_PERMISSIONS)
-        if (stripPhoneCalls ?: true) blocked.addAll(PHONE_CALLS_PERMISSIONS)
-        if (stripNearbyRadios ?: true) blocked.addAll(NEARBY_RADIOS_PERMISSIONS)
-        if (stripNetworkState ?: true) blocked.addAll(NETWORK_STATE_PERMISSIONS)
-        if (stripInternet ?: true) blocked.addAll(INTERNET_PERMISSIONS)
-        if (stripSensors ?: true) blocked.addAll(SENSORS_PERMISSIONS)
-        if (stripMediaStorage ?: true) blocked.addAll(MEDIA_STORAGE_PERMISSIONS)
-        if (stripNotifications ?: true) blocked.addAll(NOTIFICATION_PERMISSIONS)
-        if (stripSpecialAccess ?: true) blocked.addAll(SPECIAL_ACCESS_PERMISSIONS)
-        if (stripSurveillanceDeclarations ?: true) blocked.addAll(SURVEILLANCE_DECLARATION_PERMISSIONS)
-        if (stripPersistenceWakeups ?: true) blocked.addAll(PERSISTENCE_WAKEUP_PERMISSIONS)
-        if (stripHealthData ?: true) blocked.addAll(HEALTH_DATA_PERMISSIONS)
-        if (stripAds ?: true) blocked.addAll(AD_PERMISSIONS)
-        if (stripScreenshotDetection ?: true) blocked.addAll(SCREENSHOT_DETECTION_PERMISSIONS)
-
-        if (blocked.isEmpty()) {
-            println("[Remove privacy permissions] Skipped: no categories selected in patch options.")
-            return@execute
-        }
+        if (stripCamera ?: true) blocked.add("android.permission.CAMERA")
+        if (stripFgsCamera ?: true) blocked.add("android.permission.FOREGROUND_SERVICE_CAMERA")
+        if (blocked.isEmpty()) { println("[Remove camera permissions] Skipped: no permissions selected."); return@execute }
 
         var removed = 0
-        document("AndroidManifest.xml").use { document ->
-            val manifest = document.getElementsByTagName("manifest").item(0)
-            val permissions = manifest.childNodes
-            val toRemove = mutableListOf<Node>()
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove camera permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
 
-            for (i in 0 until permissions.length) {
-                val node = permissions.item(i) as? Element ?: continue
-                if (node.tagName == "uses-permission" &&
-                    node.getAttribute("android:name") in blocked
-                ) {
-                    toRemove.add(node)
-                }
-            }
+// ─── Microphone ───
 
-            toRemove.forEach { manifest.removeChild(it) }
-            removed = toRemove.size
+@Suppress("unused")
+val removeMicrophonePermissionsPatch = resourcePatch(
+    name = "Remove microphone permissions",
+    description = "Strips the app's microphone permission declarations, service-context " +
+        "capture included. All removals are on by default — open the patch options (gear) to " +
+        "keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripRecordAudio by booleanOption(
+        key = "stripRecordAudio",
+        default = true,
+        title = "RECORD_AUDIO",
+        description = "Ambient eavesdropping and long background capture — the stalkerware staple.",
+    )
+
+    val stripFgsMicrophone by booleanOption(
+        key = "stripFgsMicrophone",
+        default = true,
+        title = "FOREGROUND_SERVICE_MICROPHONE",
+        description = "Android 14+ service-context background audio capture behind a " +
+            "persistent-process notification.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripRecordAudio ?: true) blocked.add("android.permission.RECORD_AUDIO")
+        if (stripFgsMicrophone ?: true) blocked.add("android.permission.FOREGROUND_SERVICE_MICROPHONE")
+        if (blocked.isEmpty()) { println("[Remove microphone permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove microphone permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Location ───
+
+@Suppress("unused")
+val removeLocationPermissionsPatch = resourcePatch(
+    name = "Remove location permissions",
+    description = "Strips the app's location permission declarations, GNSS and service-context " +
+        "capture included. All removals are on by default — open the patch options (gear) to " +
+        "keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripFineLocation by booleanOption(
+        key = "stripFineLocation",
+        default = true,
+        title = "ACCESS_FINE_LOCATION",
+        description = "A GNSS pattern-of-life trail — home, work, habits — receive-only, works " +
+            "fully offline.",
+    )
+
+    val stripCoarseLocation by booleanOption(
+        key = "stripCoarseLocation",
+        default = true,
+        title = "ACCESS_COARSE_LOCATION",
+        description = "Approximate position stream — the same pattern-of-life leak at lower " +
+            "fidelity.",
+    )
+
+    val stripBackgroundLocation by booleanOption(
+        key = "stripBackgroundLocation",
+        default = true,
+        title = "ACCESS_BACKGROUND_LOCATION",
+        description = "Silent 24/7 location trail with no visible app use — the highest-risk " +
+            "location grant.",
+    )
+
+    val stripFgsLocation by booleanOption(
+        key = "stripFgsLocation",
+        default = true,
+        title = "FOREGROUND_SERVICE_LOCATION",
+        description = "Android 14+ service-context continuous location behind a " +
+            "persistent-process notification.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripFineLocation ?: true) blocked.add("android.permission.ACCESS_FINE_LOCATION")
+        if (stripCoarseLocation ?: true) blocked.add("android.permission.ACCESS_COARSE_LOCATION")
+        if (stripBackgroundLocation ?: true) blocked.add("android.permission.ACCESS_BACKGROUND_LOCATION")
+        if (stripFgsLocation ?: true) blocked.add("android.permission.FOREGROUND_SERVICE_LOCATION")
+        if (blocked.isEmpty()) { println("[Remove location permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove location permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Contacts & accounts ───
+
+@Suppress("unused")
+val removeContactsAccountsPermissionsPatch = resourcePatch(
+    name = "Remove contacts & accounts permissions",
+    description = "Strips the app's social-graph and account-enum declarations — the read side " +
+        "harvests offline, the write side is an integrity attack vector. All removals are on " +
+        "by default — open the patch options (gear) to keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripReadContacts by booleanOption(
+        key = "stripReadContacts",
+        default = true,
+        title = "READ_CONTACTS",
+        description = "Your full social graph — names, numbers, emails, addresses — harvested " +
+            "offline.",
+    )
+
+    val stripWriteContacts by booleanOption(
+        key = "stripWriteContacts",
+        default = true,
+        title = "WRITE_CONTACTS",
+        description = "Integrity attack: swaps bank and support contacts for attacker numbers, " +
+            "no network needed.",
+    )
+
+    val stripGetAccounts by booleanOption(
+        key = "stripGetAccounts",
+        default = true,
+        title = "GET_ACCOUNTS",
+        description = "Enumerates on-device accounts for cross-service identity linkage; " +
+            "deprecated, pure hardening.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripReadContacts ?: true) blocked.add("android.permission.READ_CONTACTS")
+        if (stripWriteContacts ?: true) blocked.add("android.permission.WRITE_CONTACTS")
+        if (stripGetAccounts ?: true) blocked.add("android.permission.GET_ACCOUNTS")
+        if (blocked.isEmpty()) { println("[Remove contacts & accounts permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove contacts & accounts permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Calendar ───
+
+@Suppress("unused")
+val removeCalendarPermissionsPatch = resourcePatch(
+    name = "Remove calendar permissions",
+    description = "Strips the app's calendar declarations — the read side harvests schedules " +
+        "offline, the write side injects phantom events into the trusted Calendar UI. All " +
+        "removals are on by default — open the patch options (gear) to keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripReadCalendar by booleanOption(
+        key = "stripReadCalendar",
+        default = true,
+        title = "READ_CALENDAR",
+        description = "Schedules, attendees, meeting links and locations — rich metadata " +
+            "harvested offline.",
+    )
+
+    val stripWriteCalendar by booleanOption(
+        key = "stripWriteCalendar",
+        default = true,
+        title = "WRITE_CALENDAR",
+        description = "Integrity attack: injects phantom events with attacker links into the " +
+            "trusted Calendar UI.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripReadCalendar ?: true) blocked.add("android.permission.READ_CALENDAR")
+        if (stripWriteCalendar ?: true) blocked.add("android.permission.WRITE_CALENDAR")
+        if (blocked.isEmpty()) { println("[Remove calendar permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove calendar permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── SMS & MMS ───
+
+@Suppress("unused")
+val removeSmsPermissionsPatch = resourcePatch(
+    name = "Remove SMS & MMS permissions",
+    description = "Strips the app's messaging declarations — premium-SMS fraud, OTP " +
+        "interception and the carrier push channel, all of which bypass the internet stack " +
+        "entirely. All removals are on by default — open the patch options (gear) to keep " +
+        "specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripSendSms by booleanOption(
+        key = "stripSendSms",
+        default = true,
+        title = "SEND_SMS",
+        description = "The premium-SMS billing fraud channel — carrier-billed, never touches " +
+            "the internet.",
+    )
+
+    val stripReadSms by booleanOption(
+        key = "stripReadSms",
+        default = true,
+        title = "READ_SMS",
+        description = "Message content, including bank and 2FA codes, harvested offline.",
+    )
+
+    val stripReceiveSms by booleanOption(
+        key = "stripReceiveSms",
+        default = true,
+        title = "RECEIVE_SMS",
+        description = "Intercepts incoming messages — including OTP codes — the moment they " +
+            "arrive.",
+    )
+
+    val stripReceiveMms by booleanOption(
+        key = "stripReceiveMms",
+        default = true,
+        title = "RECEIVE_MMS",
+        description = "Auto-retrieves MMS payloads — a media-parser attack surface on the " +
+            "radio path.",
+    )
+
+    val stripReceiveWapPush by booleanOption(
+        key = "stripReceiveWapPush",
+        default = true,
+        title = "RECEIVE_WAP_PUSH",
+        description = "Carrier OMA provisioning pushes — a silent configuration channel off " +
+            "the internet.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripSendSms ?: true) blocked.add("android.permission.SEND_SMS")
+        if (stripReadSms ?: true) blocked.add("android.permission.READ_SMS")
+        if (stripReceiveSms ?: true) blocked.add("android.permission.RECEIVE_SMS")
+        if (stripReceiveMms ?: true) blocked.add("android.permission.RECEIVE_MMS")
+        if (stripReceiveWapPush ?: true) blocked.add("android.permission.RECEIVE_WAP_PUSH")
+        if (blocked.isEmpty()) { println("[Remove SMS & MMS permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove SMS & MMS permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Phone & calls ───
+
+@Suppress("unused")
+val removePhonePermissionsPatch = resourcePatch(
+    name = "Remove phone & call permissions",
+    description = "Strips the app's telephony declarations — silent dialing, identity " +
+        "correlation, call hijacking and call-record tampering. All removals are on by " +
+        "default — open the patch options (gear) to keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripCallPhone by booleanOption(
+        key = "stripCallPhone",
+        default = true,
+        title = "CALL_PHONE",
+        description = "Silent dialing without the dialer — premium-rate fraud and tracking " +
+            "callbacks.",
+    )
+
+    val stripReadPhoneState by booleanOption(
+        key = "stripReadPhoneState",
+        default = true,
+        title = "READ_PHONE_STATE",
+        description = "Phone identifiers and call state for identity correlation, harvested " +
+            "offline.",
+    )
+
+    val stripReadPhoneNumbers by booleanOption(
+        key = "stripReadPhoneNumbers",
+        default = true,
+        title = "READ_PHONE_NUMBERS",
+        description = "Your phone number — identity linkage and SIM-swap prep.",
+    )
+
+    val stripAnswerPhoneCalls by booleanOption(
+        key = "stripAnswerPhoneCalls",
+        default = true,
+        title = "ANSWER_PHONE_CALLS",
+        description = "Answer and control incoming calls — a call-hijack primitive.",
+    )
+
+    val stripReadCallLog by booleanOption(
+        key = "stripReadCallLog",
+        default = true,
+        title = "READ_CALL_LOG",
+        description = "Your who-talks-to-whom call history, captured offline.",
+    )
+
+    val stripWriteCallLog by booleanOption(
+        key = "stripWriteCallLog",
+        default = true,
+        title = "WRITE_CALL_LOG",
+        description = "Integrity attack: edits or deletes call records to cover tracks.",
+    )
+
+    val stripUseSip by booleanOption(
+        key = "stripUseSip",
+        default = true,
+        title = "USE_SIP",
+        description = "Internet telephony; neutralized once INTERNET is removed, stripped as " +
+            "hardening.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripCallPhone ?: true) blocked.add("android.permission.CALL_PHONE")
+        if (stripReadPhoneState ?: true) blocked.add("android.permission.READ_PHONE_STATE")
+        if (stripReadPhoneNumbers ?: true) blocked.add("android.permission.READ_PHONE_NUMBERS")
+        if (stripAnswerPhoneCalls ?: true) blocked.add("android.permission.ANSWER_PHONE_CALLS")
+        if (stripReadCallLog ?: true) blocked.add("android.permission.READ_CALL_LOG")
+        if (stripWriteCallLog ?: true) blocked.add("android.permission.WRITE_CALL_LOG")
+        if (stripUseSip ?: true) blocked.add("android.permission.USE_SIP")
+        if (blocked.isEmpty()) { println("[Remove phone & call permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove phone & call permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Nearby radios ───
+
+@Suppress("unused")
+val removeNearbyRadioPermissionsPatch = resourcePatch(
+    name = "Remove nearby radio permissions",
+    description = "Strips the app's Bluetooth, UWB, Wi-Fi Aware and NFC declarations — beacon " +
+        "presence mapping, discoverability and direct RF exfiltration links, all " +
+        "offline-capable. All removals are on by default — open the patch options (gear) to " +
+        "keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripBluetooth by booleanOption(
+        key = "stripBluetooth",
+        default = true,
+        title = "BLUETOOTH",
+        description = "Legacy (pre-12) Bluetooth access — discovery reveals nearby devices " +
+            "and MAC addresses for fingerprinting.",
+    )
+
+    val stripBluetoothAdmin by booleanOption(
+        key = "stripBluetoothAdmin",
+        default = true,
+        title = "BLUETOOTH_ADMIN",
+        description = "Legacy (pre-12) Bluetooth admin — initiates discovery and makes the " +
+            "device discoverable.",
+    )
+
+    val stripBluetoothScan by booleanOption(
+        key = "stripBluetoothScan",
+        default = true,
+        title = "BLUETOOTH_SCAN",
+        description = "Scans for nearby devices and beacons — a retail-tracker presence " +
+            "census, no internet needed.",
+    )
+
+    val stripBluetoothConnect by booleanOption(
+        key = "stripBluetoothConnect",
+        default = true,
+        title = "BLUETOOTH_CONNECT",
+        description = "Direct RF data link to nearby hardware — an offline exfiltration path.",
+    )
+
+    val stripBluetoothAdvertise by booleanOption(
+        key = "stripBluetoothAdvertise",
+        default = true,
+        title = "BLUETOOTH_ADVERTISE",
+        description = "Broadcasts a presence beacon your device can be tracked by over RF.",
+    )
+
+    val stripUwbRanging by booleanOption(
+        key = "stripUwbRanging",
+        default = true,
+        title = "UWB_RANGING",
+        description = "Ultra-wideband fine-ranging — precise proximity and motion analytics, " +
+            "collected offline.",
+    )
+
+    val stripNearbyWifiDevices by booleanOption(
+        key = "stripNearbyWifiDevices",
+        default = true,
+        title = "NEARBY_WIFI_DEVICES",
+        description = "Wi-Fi Aware NAN peer links — direct device-to-device transfer with no " +
+            "access point.",
+    )
+
+    val stripNfc by booleanOption(
+        key = "stripNfc",
+        default = true,
+        title = "NFC",
+        description = "The NFC radio gate — tag reads and short-range RF peer links off the " +
+            "internet stack.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripBluetooth ?: true) blocked.add("android.permission.BLUETOOTH")
+        if (stripBluetoothAdmin ?: true) blocked.add("android.permission.BLUETOOTH_ADMIN")
+        if (stripBluetoothScan ?: true) blocked.add("android.permission.BLUETOOTH_SCAN")
+        if (stripBluetoothConnect ?: true) blocked.add("android.permission.BLUETOOTH_CONNECT")
+        if (stripBluetoothAdvertise ?: true) blocked.add("android.permission.BLUETOOTH_ADVERTISE")
+        if (stripUwbRanging ?: true) blocked.add("android.permission.UWB_RANGING")
+        if (stripNearbyWifiDevices ?: true) blocked.add("android.permission.NEARBY_WIFI_DEVICES")
+        if (stripNfc ?: true) blocked.add("android.permission.NFC")
+        if (blocked.isEmpty()) { println("[Remove nearby radio permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove nearby radio permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Network & Wi-Fi state ───
+
+@Suppress("unused")
+val removeNetworkStatePermissionsPatch = resourcePatch(
+    name = "Remove network state permissions",
+    description = "Strips the app's network-visibility declarations — Wi-Fi identity, VPN " +
+        "detection and LAN inventory. All removals are on by default — open the patch options " +
+        "(gear) to keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripAccessWifiState by booleanOption(
+        key = "stripAccessWifiState",
+        default = true,
+        title = "ACCESS_WIFI_STATE",
+        description = "Wi-Fi connection details — network names and BSSIDs identify and " +
+            "locate you.",
+    )
+
+    val stripAccessNetworkState by booleanOption(
+        key = "stripAccessNetworkState",
+        default = true,
+        title = "ACCESS_NETWORK_STATE",
+        description = "Current network type and availability; lets ad SDKs detect active " +
+            "VPNs.",
+    )
+
+    val stripAccessLocalNetwork by booleanOption(
+        key = "stripAccessLocalNetwork",
+        default = true,
+        title = "ACCESS_LOCAL_NETWORK",
+        description = "Android 16+ gate for LAN access — inventories your home network, " +
+            "every device a fingerprint.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripAccessWifiState ?: true) blocked.add("android.permission.ACCESS_WIFI_STATE")
+        if (stripAccessNetworkState ?: true) blocked.add("android.permission.ACCESS_NETWORK_STATE")
+        if (stripAccessLocalNetwork ?: true) blocked.add("android.permission.ACCESS_LOCAL_NETWORK")
+        if (blocked.isEmpty()) { println("[Remove network state permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove network state permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Internet (single permission — no gear) ───
+
+@Suppress("unused")
+val removeInternetPermissionPatch = resourcePatch(
+    name = "Remove INTERNET permission",
+    description = "Removes the android.permission.INTERNET permission from the manifest. " +
+        "Blocks every socket the app opens, so bundled ad, analytics and telemetry SDKs cannot " +
+        "phone home. Also disables any legitimate online features — only enable for apps you " +
+        "want fully offline.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    execute {
+        var removed = 0
+        document("AndroidManifest.xml").use { doc ->
+            removed = stripSelectedPermissions(doc, setOf("android.permission.INTERNET"))
         }
+        println("[Remove INTERNET permission] Stripped $removed INTERNET declaration(s).")
+    }
+}
 
-        if (removed == 0) {
-            println("[Remove privacy permissions] None of the selected permission declarations found.")
-        } else {
-            val shortNames = mutableListOf<String>()
-            document("AndroidManifest.xml").use { document ->
-                val used = document.getElementsByTagName("uses-permission")
-                // recompute from removed list instead:
-            }
-            println("[Remove privacy permissions] Stripped $removed permission declaration(s).")
+// ─── Sensors & motion ───
+
+@Suppress("unused")
+val removeSensorPermissionsPatch = resourcePatch(
+    name = "Remove sensor & motion permissions",
+    description = "Strips the app's motion and body-sensor declarations — activity " +
+        "inference, tap logging, gait profiling and device fingerprinting. All removals are " +
+        "on by default — open the patch options (gear) to keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripOtherSensors by booleanOption(
+        key = "stripOtherSensors",
+        default = true,
+        title = "OTHER_SENSORS",
+        description = "Android 15+ 'other' sensors — accelerometer, magnetometer: activity " +
+            "inference and fingerprinting.",
+    )
+
+    val stripActivityRecognition by booleanOption(
+        key = "stripActivityRecognition",
+        default = true,
+        title = "ACTIVITY_RECOGNITION",
+        description = "Gait and motion-state profiling — a cheap, continuous passive " +
+            "fingerprint.",
+    )
+
+    val stripBodySensors by booleanOption(
+        key = "stripBodySensors",
+        default = true,
+        title = "BODY_SENSORS",
+        description = "Health signals such as heart rate where sensors exist.",
+    )
+
+    val stripBodySensorsBackground by booleanOption(
+        key = "stripBodySensorsBackground",
+        default = true,
+        title = "BODY_SENSORS_BACKGROUND",
+        description = "Continuous background body-sensor reads with no visible app use.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripOtherSensors ?: true) blocked.add("android.permission.OTHER_SENSORS")
+        if (stripActivityRecognition ?: true) blocked.add("android.permission.ACTIVITY_RECOGNITION")
+        if (stripBodySensors ?: true) blocked.add("android.permission.BODY_SENSORS")
+        if (stripBodySensorsBackground ?: true) blocked.add("android.permission.BODY_SENSORS_BACKGROUND")
+        if (blocked.isEmpty()) { println("[Remove sensor & motion permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove sensor & motion permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Media & storage ───
+
+@Suppress("unused")
+val removeMediaStoragePermissionsPatch = resourcePatch(
+    name = "Remove media & storage permissions",
+    description = "Strips the app's media and shared-storage declarations — the full library " +
+        "including PII screenshots, EXIF GPS location history, and legacy shared-storage " +
+        "integrity. All removals are on by default — open the patch options (gear) to keep " +
+        "specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripReadMediaImages by booleanOption(
+        key = "stripReadMediaImages",
+        default = true,
+        title = "READ_MEDIA_IMAGES",
+        description = "Your entire photo library, including PII screenshots, captured offline.",
+    )
+
+    val stripReadMediaVideo by booleanOption(
+        key = "stripReadMediaVideo",
+        default = true,
+        title = "READ_MEDIA_VIDEO",
+        description = "Your entire video library, harvested offline.",
+    )
+
+    val stripReadMediaAudio by booleanOption(
+        key = "stripReadMediaAudio",
+        default = true,
+        title = "READ_MEDIA_AUDIO",
+        description = "Voice notes and recordings, harvested offline.",
+    )
+
+    val stripReadMediaVisualUserSelected by booleanOption(
+        key = "stripReadMediaVisualUserSelected",
+        default = true,
+        title = "READ_MEDIA_VISUAL_USER_SELECTED",
+        description = "The specific media items granted in the partial-photo-access flow.",
+    )
+
+    val stripAccessMediaLocation by booleanOption(
+        key = "stripAccessMediaLocation",
+        default = true,
+        title = "ACCESS_MEDIA_LOCATION",
+        description = "EXIF GPS from shared media — a location-history leak bypassing " +
+            "location permissions.",
+    )
+
+    val stripReadExternalStorage by booleanOption(
+        key = "stripReadExternalStorage",
+        default = true,
+        title = "READ_EXTERNAL_STORAGE",
+        description = "Legacy (API ≤32) shared-storage read, including other apps' Download " +
+            "dropboxes.",
+    )
+
+    val stripWriteExternalStorage by booleanOption(
+        key = "stripWriteExternalStorage",
+        default = true,
+        title = "WRITE_EXTERNAL_STORAGE",
+        description = "Legacy (API ≤32) shared-storage write — an integrity surface over every " +
+            "app's Downloads.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripReadMediaImages ?: true) blocked.add("android.permission.READ_MEDIA_IMAGES")
+        if (stripReadMediaVideo ?: true) blocked.add("android.permission.READ_MEDIA_VIDEO")
+        if (stripReadMediaAudio ?: true) blocked.add("android.permission.READ_MEDIA_AUDIO")
+        if (stripReadMediaVisualUserSelected ?: true) blocked.add("android.permission.READ_MEDIA_VISUAL_USER_SELECTED")
+        if (stripAccessMediaLocation ?: true) blocked.add("android.permission.ACCESS_MEDIA_LOCATION")
+        if (stripReadExternalStorage ?: true) blocked.add("android.permission.READ_EXTERNAL_STORAGE")
+        if (stripWriteExternalStorage ?: true) blocked.add("android.permission.WRITE_EXTERNAL_STORAGE")
+        if (blocked.isEmpty()) { println("[Remove media & storage permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove media & storage permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Notifications (single permission — no gear) ───
+
+@Suppress("unused")
+val removeNotificationPermissionPatch = resourcePatch(
+    name = "Remove notification permission",
+    description = "Removes the android.permission.POST_NOTIFICATIONS permission from the " +
+        "manifest — a lure and phishing delivery channel into your notification shade. Apps " +
+        "go quiet; that is the point.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    execute {
+        var removed = 0
+        document("AndroidManifest.xml").use { doc ->
+            removed = stripSelectedPermissions(doc, setOf("android.permission.POST_NOTIFICATIONS"))
         }
+        println("[Remove notification permission] Stripped $removed POST_NOTIFICATIONS declaration(s).")
+    }
+}
+
+// ─── Special-access grant screens ───
+
+@Suppress("unused")
+val removeSpecialAccessPermissionsPatch = resourcePatch(
+    name = "Remove special-access permissions",
+    description = "Strips the app's special-access declarations — usage-history surveillance, " +
+        "overlay tapjacking, all-files access, the dropper channel and settings hijacking; " +
+        "removal means the app can never reach its Settings grant state. All removals are on " +
+        "by default — open the patch options (gear) to keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripPackageUsageStats by booleanOption(
+        key = "stripPackageUsageStats",
+        default = true,
+        title = "PACKAGE_USAGE_STATS",
+        description = "The Usage Access grant — your full app-usage history; the " +
+            "parental-control/stalkerware channel.",
+    )
+
+    val stripSystemAlertWindow by booleanOption(
+        key = "stripSystemAlertWindow",
+        default = true,
+        title = "SYSTEM_ALERT_WINDOW",
+        description = "The overlay grant — tapjacking, fake-dialog phishing and ad spam over " +
+            "other apps.",
+    )
+
+    val stripManageExternalStorage by booleanOption(
+        key = "stripManageExternalStorage",
+        default = true,
+        title = "MANAGE_EXTERNAL_STORAGE",
+        description = "The All-files-access grant — read and write over the entire shared " +
+            "storage.",
+    )
+
+    val stripManageMedia by booleanOption(
+        key = "stripManageMedia",
+        default = true,
+        title = "MANAGE_MEDIA",
+        description = "The Media-management grant — modify and delete all media without " +
+            "per-item grants.",
+    )
+
+    val stripRequestInstallPackages by booleanOption(
+        key = "stripRequestInstallPackages",
+        default = true,
+        title = "REQUEST_INSTALL_PACKAGES",
+        description = "The dropper channel — silently self-update and sideload further APKs.",
+    )
+
+    val stripWriteSettings by booleanOption(
+        key = "stripWriteSettings",
+        default = true,
+        title = "WRITE_SETTINGS",
+        description = "The system-settings grant — an integrity surface over ringtone, DND " +
+            "and default apps.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripPackageUsageStats ?: true) blocked.add("android.permission.PACKAGE_USAGE_STATS")
+        if (stripSystemAlertWindow ?: true) blocked.add("android.permission.SYSTEM_ALERT_WINDOW")
+        if (stripManageExternalStorage ?: true) blocked.add("android.permission.MANAGE_EXTERNAL_STORAGE")
+        if (stripManageMedia ?: true) blocked.add("android.permission.MANAGE_MEDIA")
+        if (stripRequestInstallPackages ?: true) blocked.add("android.permission.REQUEST_INSTALL_PACKAGES")
+        if (stripWriteSettings ?: true) blocked.add("android.permission.WRITE_SETTINGS")
+        if (blocked.isEmpty()) { println("[Remove special-access permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove special-access permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Signature-declared surveillance signals (inert hardening, BIND_* class) ───
+
+@Suppress("unused")
+val removeSurveillanceDeclarationPermissionsPatch = resourcePatch(
+    name = "Remove surveillance service declarations",
+    description = "Strips the BIND_* family — system-signature declarations no third-party " +
+        "app can ever be granted, kept in the manifest only as intent markers for " +
+        "accessibility scraping, device admin, notification listening and keylogging. All " +
+        "removals are on by default — open the patch options (gear) to keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripBindAccessibilityService by booleanOption(
+        key = "stripBindAccessibilityService",
+        default = true,
+        title = "BIND_ACCESSIBILITY_SERVICE",
+        description = "System-signature declaration no third-party app can hold — the " +
+            "accessibility-scraping stalkerware marker.",
+    )
+
+    val stripBindDeviceAdmin by booleanOption(
+        key = "stripBindDeviceAdmin",
+        default = true,
+        title = "BIND_DEVICE_ADMIN",
+        description = "System-signature declaration signaling device-admin intent — remote " +
+            "lock, wipe, enforced policy.",
+    )
+
+    val stripBindNotificationListener by booleanOption(
+        key = "stripBindNotificationListener",
+        default = true,
+        title = "BIND_NOTIFICATION_LISTENER_SERVICE",
+        description = "System-signature declaration signaling a notification listener — " +
+            "every notification, including 2FA codes.",
+    )
+
+    val stripBindInputMethod by booleanOption(
+        key = "stripBindInputMethod",
+        default = true,
+        title = "BIND_INPUT_METHOD",
+        description = "System-signature declaration signaling a keyboard — every keystroke " +
+            "in every app.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripBindAccessibilityService ?: true) blocked.add("android.permission.BIND_ACCESSIBILITY_SERVICE")
+        if (stripBindDeviceAdmin ?: true) blocked.add("android.permission.BIND_DEVICE_ADMIN")
+        if (stripBindNotificationListener ?: true) blocked.add("android.permission.BIND_NOTIFICATION_LISTENER_SERVICE")
+        if (stripBindInputMethod ?: true) blocked.add("android.permission.BIND_INPUT_METHOD")
+        if (blocked.isEmpty()) { println("[Remove surveillance service declarations] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove surveillance service declarations] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Install-time persistence and wakeups ───
+
+@Suppress("unused")
+val removePersistenceWakeupPermissionsPatch = resourcePatch(
+    name = "Remove persistence & wakeup permissions",
+    description = "Strips the app's persistence and wake-scheduling declarations — boot " +
+        "auto-start, CPU hold and precise periodic wakeups, the backbone of always-on " +
+        "background telemetry. All removals are on by default — open the patch options " +
+        "(gear) to keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripBootCompleted by booleanOption(
+        key = "stripBootCompleted",
+        default = true,
+        title = "RECEIVE_BOOT_COMPLETED",
+        description = "Auto-start on every boot — the persistence backbone of always-on " +
+            "telemetry.",
+    )
+
+    val stripWakeLock by booleanOption(
+        key = "stripWakeLock",
+        default = true,
+        title = "WAKE_LOCK",
+        description = "Holds the CPU awake — the enabler of unbounded background processing " +
+            "and beacons.",
+    )
+
+    val stripScheduleExactAlarm by booleanOption(
+        key = "stripScheduleExactAlarm",
+        default = true,
+        title = "SCHEDULE_EXACT_ALARM",
+        description = "Precise scheduled wakeups — the backbone of periodic telemetry " +
+            "beacons.",
+    )
+
+    val stripUseExactAlarm by booleanOption(
+        key = "stripUseExactAlarm",
+        default = true,
+        title = "USE_EXACT_ALARM",
+        description = "Non-revocable exact-alarm bypass; removal is the only way to revoke it.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripBootCompleted ?: true) blocked.add("android.permission.RECEIVE_BOOT_COMPLETED")
+        if (stripWakeLock ?: true) blocked.add("android.permission.WAKE_LOCK")
+        if (stripScheduleExactAlarm ?: true) blocked.add("android.permission.SCHEDULE_EXACT_ALARM")
+        if (stripUseExactAlarm ?: true) blocked.add("android.permission.USE_EXACT_ALARM")
+        if (blocked.isEmpty()) { println("[Remove persistence & wakeup permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove persistence & wakeup permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Health Connect ───
+
+@Suppress("unused")
+val removeHealthConnectPermissionsPatch = resourcePatch(
+    name = "Remove Health Connect permissions",
+    description = "Strips the app's Health Connect declarations — background reads granted " +
+        "without a separate prompt, and history reaching back before install. All removals " +
+        "are on by default — open the patch options (gear) to keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripHealthBackground by booleanOption(
+        key = "stripHealthBackground",
+        default = true,
+        title = "READ_HEALTH_DATA_IN_BACKGROUND",
+        description = "Background health reads — steps, sleep, heart rate — granted without a " +
+            "separate prompt.",
+    )
+
+    val stripHealthHistory by booleanOption(
+        key = "stripHealthHistory",
+        default = true,
+        title = "READ_HEALTH_DATA_HISTORY",
+        description = "History access reaching back to health data from before the app was " +
+            "installed.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripHealthBackground ?: true) blocked.add("android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND")
+        if (stripHealthHistory ?: true) blocked.add("android.permission.health.READ_HEALTH_DATA_HISTORY")
+        if (blocked.isEmpty()) { println("[Remove Health Connect permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove Health Connect permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Privacy Sandbox / advertising ───
+
+@Suppress("unused")
+val removeAdPermissionsPatch = resourcePatch(
+    name = "Remove ad & Privacy Sandbox permissions",
+    description = "Strips the app's ad-stack declarations — interest profiling, the " +
+        "advertising identifier and cross-app attribution measurement. All removals are on " +
+        "by default — open the patch options (gear) to keep specific ones.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    val stripAdTopics by booleanOption(
+        key = "stripAdTopics",
+        default = true,
+        title = "ACCESS_ADSERVICES_TOPICS",
+        description = "Privacy Sandbox Topics — your advertising-interest profile.",
+    )
+
+    val stripAdId by booleanOption(
+        key = "stripAdId",
+        default = true,
+        title = "ACCESS_AD_SERVICES_AD_ID",
+        description = "The Privacy Sandbox advertising ID used for attribution and profiling.",
+    )
+
+    val stripAdAttribution by booleanOption(
+        key = "stripAdAttribution",
+        default = true,
+        title = "ACCESS_ADSERVICES_ATTRIBUTION",
+        description = "Cross-app attribution measurement — install and conversion matching.",
+    )
+
+    execute {
+        val blocked = mutableSetOf<String>()
+        if (stripAdTopics ?: true) blocked.add("android.permission.ACCESS_ADSERVICES_TOPICS")
+        if (stripAdId ?: true) blocked.add("android.permission.ACCESS_AD_SERVICES_AD_ID")
+        if (stripAdAttribution ?: true) blocked.add("android.permission.ACCESS_ADSERVICES_ATTRIBUTION")
+        if (blocked.isEmpty()) { println("[Remove ad & Privacy Sandbox permissions] Skipped: no permissions selected."); return@execute }
+
+        var removed = 0
+        document("AndroidManifest.xml").use { doc -> removed = stripSelectedPermissions(doc, blocked) }
+        println("[Remove ad & Privacy Sandbox permissions] Stripped $removed of ${blocked.size} selected permission declaration(s).")
+    }
+}
+
+// ─── Screenshot detection (single permission — no gear) ───
+
+@Suppress("unused")
+val removeScreenshotDetectionPermissionPatch = resourcePatch(
+    name = "Remove screenshot detection permission",
+    description = "Removes the android.permission.DETECT_SCREEN_CAPTURE permission from the " +
+        "manifest (Android 15+) — banking apps scold you and surveillance apps learn that " +
+        "evidence is being collected. Removing it makes your screenshots silent. Pair with " +
+        "the Universal Screenshot Protection Bypass to also clear FLAG_SECURE.",
+    default = false, // universal patches must be default false, the patcher warns otherwise
+) {
+    execute {
+        var removed = 0
+        document("AndroidManifest.xml").use { doc ->
+            removed = stripSelectedPermissions(doc, setOf("android.permission.DETECT_SCREEN_CAPTURE"))
+        }
+        println("[Remove screenshot detection permission] Stripped $removed DETECT_SCREEN_CAPTURE declaration(s).")
     }
 }
