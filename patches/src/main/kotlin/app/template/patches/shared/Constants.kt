@@ -57,4 +57,13 @@ object Constants {
  appIconColor = 0x2E86AB,
  targets = listOf(AppTarget(version = "1.71.3", versionCode = 523))
  )
+ 
+ // recon 2026-10-11: hurry 30.2 (186), exact dumped build, sha256 815dcbde…48cc
+ val HURRY_COMPATIBILITY = Compatibility(
+  name = "Hurry Day Countdown & Reminder",
+  packageName = "com.samruston.hurry",
+  apkFileType = ApkFileType.APKS, // ships as a Play bundle (.apkm)
+  appIconColor = 0x1E88E5,
+  targets = listOf(AppTarget(version = "30.2", versionCode = 186))
+ )
 }
