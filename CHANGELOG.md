@@ -1,3 +1,9 @@
+## [1.9.0](https://github.com/o0b/morphe-patches/compare/v1.8.0...v1.9.0) (2026-10-11)
+
+### ✨ New Features
+
+* add Hurry patches (pro, pairip, telemetry) ([7c4249f](https://github.com/o0b/morphe-patches/commit/7c4249f1082fb6ca50474d5d063791b4326817b9))
+
 ## [1.8.0](https://github.com/o0b/morphe-patches/compare/v1.7.0...v1.8.0) (2026-10-09)
 
 ### ✨ New Features

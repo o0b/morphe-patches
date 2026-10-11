@@ -13,7 +13,7 @@ Click here to add these patches to Morphe: https://morphe.software/add-source?gi
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.8.0](https://github.com/o0b/morphe-patches/releases/tag/v1.8.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;50 patches total
+> **[v1.9.0](https://github.com/o0b/morphe-patches/releases/tag/v1.9.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;53 patches total
 <details open>
 <summary>📦 Nova Launcher&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
 <br>
@@ -29,6 +29,23 @@ Click here to add these patches to Morphe: https://morphe.software/add-source?gi
 | [Disable Sesame integrations](#disable-sesame-integrations) | Disables Nova Launcher 8.1.6's Sesame third-party integrations (Spotify, OneDrive, Twitch, Slack, Discord, Dropbox, Deezer, GitHub): the integration ingest always returns 0 items, so no background or manual data pulls run and their APIs are never contacted. The Sesame engine and local search indexing continue to work. |  |
 | [Disable Sesame search results](#disable-sesame-search-results) | Removes the bundled Sesame (Branch) deep-shortcut results from Nova Launcher's search on 8.1.6 by no-op'ing its results provider. Search still returns apps, contacts and settings. |  |
 | [Unlock Prime](#unlock-prime) | Unlocks Nova Launcher Prime on 8.1.6 by forcing the runtime prime flags (Lzg/t1;->y / ->t) to true at every write — the settings initializer and the Prime-unlocker package-change handler. |  |
+
+</details>
+
+<details open>
+<summary>📦 Hurry Day Countdown & Reminder&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 30.2 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Disable Firebase analytics and remote config](#disable-firebase-analytics-and-remote-config) | No-ops the app's FirebaseAnalytics event logger and the startup RemoteConfig fetch (no FID, no config phone-home). |  |
+| [Disable Pairip integrity and license checks](#disable-pairip-integrity-and-license-checks) | Removes the signature-tamper crash and the Play-licensing error dialog and shutdown that fire without Google Play services. |  |
+| [Unlock pro features](#unlock-pro-features) | Forces the app's own "purchased" preference on at process start and neutralizes the billing re-verify that erases it without Play services. |  |
 
 </details>
 
