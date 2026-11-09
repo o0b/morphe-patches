@@ -1,3 +1,9 @@
+## [1.10.0](https://github.com/o0b/morphe-patches/compare/v1.9.0...v1.10.0) (2026-11-09)
+
+### ✨ New Features
+
+* ivy ([34dd231](https://github.com/o0b/morphe-patches/commit/34dd231f40cd1a44697d923a909dca8b449139ae))
+
 ## [1.9.0](https://github.com/o0b/morphe-patches/compare/v1.8.0...v1.9.0) (2026-10-11)
 
 ### ✨ New Features
