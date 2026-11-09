@@ -9,7 +9,7 @@ internal object FabricWithFingerprint : Fingerprint(
  name = "with",
  definingClass = "Lio/fabric/sdk/android/Fabric;",
  returnType = "Lio/fabric/sdk/android/Fabric;",
- accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
+ accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC, AccessFlags.VARARGS),
  parameters = listOf("Landroid/content/Context;", "[Lio/fabric/sdk/android/Kit;"),
  filters = listOf(
   methodCall(definingClass = "Lio/fabric/sdk/android/Fabric\$Builder;", name = "build"),
