@@ -8,29 +8,31 @@ import app.template.patches.shared.Constants.IVY_COMPATIBILITY
 @Suppress("unused")
 val ivyQuickPanelNoTransitionPatch = bytecodePatch(
  name = "Remove Quick Panel transition animation",
- description = "Removes the code-driven open and close animations from the Quick Panel while keeping the RSS start and stop behavior.",
+ description = "Forces the Quick Panel open and close animations to finish instantly while keeping the animation listeners that set the panel visible.",
  default = true,
 ) {
  compatibleWith(IVY_COMPATIBILITY)
 
  execute {
-  // animateIn(): skip the blur animation, keep RssCrawl.start().
-  QuickPanelViewAnimateInFingerprint.method.addInstructions(
-   0,
+  // frameInAnim(): set the loaded animation duration to 0 ms.
+  QuickPanelViewFrameInAnimFingerprint.method.addInstructions(
+   7,
    """
-   iget-object v0, v2, Lcom/stinger/ivy/quickpanel/QuickPanelView;->mRss:Lcom/stinger/ivy/rss/RssCrawl;
-   invoke-virtual {v0}, Lcom/stinger/ivy/rss/RssCrawl;->start()V
-   return-void
+   const-wide/16 v1, 0
+   invoke-virtual {v0, v1, v2}, Landroid/view/animation/Animation;->setDuration(J)Landroid/view/animation/Animation;
+   move-result-object v0
+   return-object v0
    """.trimIndent(),
   )
 
-  // animateOut(): skip the blur animation, keep RssCrawl.stop().
-  QuickPanelViewAnimateOutFingerprint.method.addInstructions(
-   0,
+  // frameOutAnim(): set the loaded animation duration to 0 ms.
+  QuickPanelViewFrameOutAnimFingerprint.method.addInstructions(
+   7,
    """
-   iget-object v2, v1, Lcom/stinger/ivy/quickpanel/QuickPanelView;->mRss:Lcom/stinger/ivy/rss/RssCrawl;
-   invoke-virtual {v2}, Lcom/stinger/ivy/rss/RssCrawl;->stop()V
-   return-void
+   const-wide/16 v0, 0
+   invoke-virtual {v3, v0, v1}, Landroid/view/animation/Animation;->setDuration(J)Landroid/view/animation/Animation;
+   move-result-object v3
+   return-object v3
    """.trimIndent(),
   )
  }
