@@ -13,7 +13,7 @@ Click here to add these patches to Morphe: https://morphe.software/add-source?gi
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.12.2](https://github.com/o0b/morphe-patches/releases/tag/v1.12.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;59 patches total
+> **[v1.13.0](https://github.com/o0b/morphe-patches/releases/tag/v1.13.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;59 patches total
 <details open>
 <summary>📦 Ivy&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
 <br>
@@ -29,7 +29,7 @@ Click here to add these patches to Morphe: https://morphe.software/add-source?gi
 | [Disable telemetry](#disable-telemetry) | Disables Fabric, Crashlytics, and Answers analytics. |  |
 | [Force offline](#force-offline) | Disables Firebase and RSS network fetches. |  |
 | [Remove INTERNET permission](#remove-internet-permission) | Strips the INTERNET permission and disables Ivy's ads, telemetry, Firebase and RSS network paths so the app starts fully offline instead of crashing. |  |
-| [Remove Quick Panel transition animation](#remove-quick-panel-transition-animation) | Forces the Quick Panel open and close animations to finish instantly while keeping the animation listeners that set the panel visible. |  |
+| [Remove Quick Panel transition animation](#remove-quick-panel-transition-animation) | Forces the Quick Panel frame, ribbon and edge-slide animations to finish instantly while keeping the animation listeners that set the panel visible. |  |
 | [Remove ads](#remove-ads) | Removes AdMob initialization and the quick panel ad view. |  |
 
 </details>
