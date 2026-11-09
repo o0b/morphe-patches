@@ -1,3 +1,9 @@
+## [1.12.2](https://github.com/o0b/morphe-patches/compare/v1.12.1...v1.12.2) (2026-11-09)
+
+### 🐛 Bug Fixes
+
+* IvyQuickPanelNoTransitionPatch.kt ([c990457](https://github.com/o0b/morphe-patches/commit/c99045720c34ee0a930eeacd390b7a779057ea64))
+
 ## [1.12.1](https://github.com/o0b/morphe-patches/compare/v1.12.0...v1.12.1) (2026-11-09)
 
 ### 🐛 Bug Fixes
