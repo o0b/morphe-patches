@@ -1,3 +1,10 @@
+## [1.11.1](https://github.com/o0b/morphe-patches/compare/v1.11.0...v1.11.1) (2026-11-09)
+
+### 🐛 Bug Fixes
+
+* IvyAnimationSpeedPatch.kt ([b0e50f1](https://github.com/o0b/morphe-patches/commit/b0e50f16bfb120409fe67bf78028b973d6caec0b))
+* IvyAnimationSpeedPatch.kt ([9a60f80](https://github.com/o0b/morphe-patches/commit/9a60f8030f64e922b1891467e89bd00e4d310044))
+
 ## [1.11.0](https://github.com/o0b/morphe-patches/compare/v1.10.1...v1.11.0) (2026-11-09)
 
 ### ✨ New Features
