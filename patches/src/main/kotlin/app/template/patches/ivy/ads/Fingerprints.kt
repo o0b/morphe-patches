@@ -10,7 +10,7 @@ internal object MobileAdsInitProviderAttachInfoFingerprint : Fingerprint(
  name = "attachInfo",
  definingClass = "Lcom/google/android/gms/ads/MobileAdsInitProvider;",
  returnType = "V",
- accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+ accessFlags = listOf(AccessFlags.PUBLIC),
  parameters = listOf("Landroid/content/Context;", "Landroid/content/pm/ProviderInfo;"),
  filters = listOf(
   methodCall(definingClass = "Lcom/google/android/gms/internal/ads/zzabg;", name = "attachInfo"),
@@ -21,7 +21,7 @@ internal object MobileAdsInitProviderOnCreateFingerprint : Fingerprint(
  name = "onCreate",
  definingClass = "Lcom/google/android/gms/ads/MobileAdsInitProvider;",
  returnType = "Z",
- accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+ accessFlags = listOf(AccessFlags.PUBLIC),
  parameters = listOf(),
  filters = listOf(
   methodCall(definingClass = "Lcom/google/android/gms/internal/ads/zzabg;", name = "onCreate"),
