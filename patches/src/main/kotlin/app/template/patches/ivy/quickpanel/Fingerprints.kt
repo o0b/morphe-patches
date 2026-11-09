@@ -26,3 +26,25 @@ internal object QuickPanelViewFrameOutAnimFingerprint : Fingerprint(
   methodCall(definingClass = "Lcom/stinger/ivy/utils/AnimationUtils;", name = "getAnimation"),
  ),
 )
+
+internal object QuickPanelViewRibbonsInAnimFingerprint : Fingerprint(
+ name = "ribbonsInAnim",
+ definingClass = "Lcom/stinger/ivy/quickpanel/QuickPanelView;",
+ returnType = "Landroid/view/animation/Animation;",
+ accessFlags = listOf(AccessFlags.PUBLIC),
+ parameters = listOf(),
+ filters = listOf(
+  methodCall(definingClass = "Lcom/stinger/ivy/utils/AnimationUtils;", name = "getAnimation"),
+ ),
+)
+
+internal object QuickPanelViewRibbonsOutAnimFingerprint : Fingerprint(
+ name = "ribbonsOutAnim",
+ definingClass = "Lcom/stinger/ivy/quickpanel/QuickPanelView;",
+ returnType = "Landroid/view/animation/Animation;",
+ accessFlags = listOf(AccessFlags.PUBLIC),
+ parameters = listOf(),
+ filters = listOf(
+  methodCall(definingClass = "Lcom/stinger/ivy/utils/AnimationUtils;", name = "getAnimation"),
+ ),
+)
