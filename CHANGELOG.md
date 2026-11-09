@@ -1,3 +1,9 @@
+## [1.10.1](https://github.com/o0b/morphe-patches/compare/v1.10.0...v1.10.1) (2026-11-09)
+
+### 🐛 Bug Fixes
+
+* fingerprint ([e9eb34d](https://github.com/o0b/morphe-patches/commit/e9eb34de0659dd5d39c63d21ead8faa710e16171))
+
 ## [1.10.0](https://github.com/o0b/morphe-patches/compare/v1.9.0...v1.10.0) (2026-11-09)
 
 ### ✨ New Features

@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-09T08:20:37",
-  "description": "## [1.10.0](https://github.com/o0b/morphe-patches/compare/v1.9.0...v1.10.0) (2026-11-09)\n\n### ✨ New Features\n\n* ivy ([34dd231](https://github.com/o0b/morphe-patches/commit/34dd231f40cd1a44697d923a909dca8b449139ae))",
-  "download_url": "https://github.com/o0b/morphe-patches/releases/download/v1.10.0/patches-1.10.0.mpp",
+  "created_at": "2026-11-09T09:08:48",
+  "description": "## [1.10.1](https://github.com/o0b/morphe-patches/compare/v1.10.0...v1.10.1) (2026-11-09)\n\n### 🐛 Bug Fixes\n\n* fingerprint ([e9eb34d](https://github.com/o0b/morphe-patches/commit/e9eb34de0659dd5d39c63d21ead8faa710e16171))",
+  "download_url": "https://github.com/o0b/morphe-patches/releases/download/v1.10.1/patches-1.10.1.mpp",
   "signature_download_url": "",
-  "version": "1.10.0"
+  "version": "1.10.1"
 }
