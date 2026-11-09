@@ -19,8 +19,7 @@ val ivyQuickPanelNoTransitionPatch = bytecodePatch(
    7,
    """
    const-wide/16 v1, 0
-   invoke-virtual {v0, v1, v2}, Landroid/view/animation/Animation;->setDuration(J)Landroid/view/animation/Animation;
-   move-result-object v0
+   invoke-virtual {v0, v1, v2}, Landroid/view/animation/Animation;->setDuration(J)V
    return-object v0
    """.trimIndent(),
   )
@@ -30,8 +29,7 @@ val ivyQuickPanelNoTransitionPatch = bytecodePatch(
    7,
    """
    const-wide/16 v0, 0
-   invoke-virtual {v3, v0, v1}, Landroid/view/animation/Animation;->setDuration(J)Landroid/view/animation/Animation;
-   move-result-object v3
+   invoke-virtual {v3, v0, v1}, Landroid/view/animation/Animation;->setDuration(J)V
    return-object v3
    """.trimIndent(),
   )
