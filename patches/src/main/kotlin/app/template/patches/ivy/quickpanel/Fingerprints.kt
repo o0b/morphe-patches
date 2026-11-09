@@ -5,24 +5,24 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.methodCall
 import com.android.tools.smali.dexlib2.AccessFlags
 
-internal object QuickPanelViewAnimateInFingerprint : Fingerprint(
- name = "animateIn",
+internal object QuickPanelViewFrameInAnimFingerprint : Fingerprint(
+ name = "frameInAnim",
  definingClass = "Lcom/stinger/ivy/quickpanel/QuickPanelView;",
- returnType = "V",
+ returnType = "Landroid/view/animation/Animation;",
  accessFlags = listOf(AccessFlags.PUBLIC),
  parameters = listOf(),
  filters = listOf(
-  methodCall(definingClass = "Lcom/stinger/ivy/rss/RssCrawl;", name = "start"),
+  methodCall(definingClass = "Lcom/stinger/ivy/utils/AnimationUtils;", name = "getAnimation"),
  ),
 )
 
-internal object QuickPanelViewAnimateOutFingerprint : Fingerprint(
- name = "animateOut",
+internal object QuickPanelViewFrameOutAnimFingerprint : Fingerprint(
+ name = "frameOutAnim",
  definingClass = "Lcom/stinger/ivy/quickpanel/QuickPanelView;",
- returnType = "V",
+ returnType = "Landroid/view/animation/Animation;",
  accessFlags = listOf(AccessFlags.PUBLIC),
  parameters = listOf("Landroid/view/View;"),
  filters = listOf(
-  methodCall(definingClass = "Lcom/stinger/ivy/rss/RssCrawl;", name = "stop"),
+  methodCall(definingClass = "Lcom/stinger/ivy/utils/AnimationUtils;", name = "getAnimation"),
  ),
 )
