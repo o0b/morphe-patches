@@ -8,6 +8,7 @@ import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.IVY_COMPATIBILITY
 import app.template.patches.shared.doRecursively
 import org.w3c.dom.Element
+import java.io.File
 
 @Suppress("unused")
 val ivyAnimationSpeedPatch = resourcePatch(
@@ -48,34 +49,40 @@ val ivyAnimationSpeedPatch = resourcePatch(
    return@execute
   }
 
-  val animationPaths = decode("res/anim*", "res/animator*")
-   .filter { it.endsWith(".xml") }
-
-  if (animationPaths.isEmpty()) {
-   println("[Adjust animation speed] Warning: no XML animation files were found.")
-   return@execute
-  }
-
+  val resourceRoot = this["res"]
+  val animationDirectories = listOf("anim", "animator")
   var changedAttributes = 0
 
-  animationPaths.forEach { path ->
-   document(path).use { doc ->
-    doc.doRecursively { node ->
-     if (node is Element) {
-      for (attribute in listOf("android:duration", "android:startOffset")) {
-       val rawValue = node.getAttribute(attribute)
-       if (rawValue.isEmpty()) {
-        continue
-       }
+  animationDirectories.forEach { directoryName ->
+   val directory = File(resourceRoot, directoryName)
+   if (!directory.exists()) {
+    return@forEach
+   }
 
-       val value = rawValue.toLongOrNull() ?: continue
-       val scaledValue = (value * scale).toLong().coerceAtLeast(0)
-       node.setAttribute(attribute, scaledValue.toString())
-       changedAttributes++
+   directory.walkTopDown()
+    .filter { it.isFile && it.extension == "xml" }
+    .forEach { file ->
+     val relativePath = file.relativeTo(resourceRoot).path
+     val documentPath = "res/$relativePath"
+
+     document(documentPath).use { doc ->
+      doc.doRecursively { node ->
+       if (node is Element) {
+        for (attribute in listOf("android:duration", "android:startOffset")) {
+         val rawValue = node.getAttribute(attribute)
+         if (rawValue.isEmpty()) {
+          continue
+         }
+
+         val value = rawValue.toLongOrNull() ?: continue
+         val scaledValue = (value * scale).toLong().coerceAtLeast(0)
+         node.setAttribute(attribute, scaledValue.toString())
+         changedAttributes++
+        }
+       }
       }
      }
     }
-   }
   }
 
   println("[Adjust animation speed] Scaled $changedAttributes animation attribute(s) by $scale.")
