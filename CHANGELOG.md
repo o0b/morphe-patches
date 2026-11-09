@@ -1,3 +1,9 @@
+## [1.12.1](https://github.com/o0b/morphe-patches/compare/v1.12.0...v1.12.1) (2026-11-09)
+
+### 🐛 Bug Fixes
+
+* animation speed ([349443f](https://github.com/o0b/morphe-patches/commit/349443faa480ddbcf31f440dce026ab91f70bf4b))
+
 ## [1.12.0](https://github.com/o0b/morphe-patches/compare/v1.11.1...v1.12.0) (2026-11-09)
 
 ### ✨ New Features

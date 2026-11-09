@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "patches": [
     {
       "name": "Adjust animation speed",
@@ -746,7 +746,7 @@
     },
     {
       "name": "Remove Quick Panel transition animation",
-      "description": "Removes the code-driven open and close animations from the Quick Panel while keeping the RSS start and stop behavior.",
+      "description": "Forces the Quick Panel open and close animations to finish instantly while keeping the animation listeners that set the panel visible.",
       "default": true,
       "category": null,
       "dependencies": [],
