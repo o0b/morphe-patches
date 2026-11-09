@@ -1,7 +1,58 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.10.1",
+  "version": "1.11.0",
   "patches": [
+    {
+      "name": "Adjust animation speed",
+      "description": "Scales or disables all XML-based animations in Ivy (Quick Panel, drawer, widget and handle animations). Set the scale to 0 to remove animations, or use the disable toggle.",
+      "default": true,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.stinger.ivy",
+          "name": "Ivy",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#2E7D32",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "1.1.29",
+              "versionCodes": {
+                "ARM64_V8A": 29,
+                "ARMEABI_V7A": 29,
+                "X86_64": 29,
+                "X86": 29
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": [
+        {
+          "key": "animationScale",
+          "title": "Animation scale",
+          "description": "Multiplier for animation durations. 1.0 = normal, 0.5 = twice as fast, 2.0 = twice as slow, 0 = instant. Applies to all XML animations in res/anim and res/animator.",
+          "required": false,
+          "type": "kotlin.String",
+          "default": "1.0",
+          "values": null
+        },
+        {
+          "key": "disableAnimations",
+          "title": "Disable animations",
+          "description": "Instantly finish every XML animation. Equivalent to an animation scale of 0.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": false,
+          "values": null
+        }
+      ]
+    },
     {
       "name": "Disable Amazon IAP components",
       "description": "Disables the orphan Amazon In-App Purchasing response receiver and strips the Amazon PrivacyPass attest permission. Inert without the Amazon Appstore installed.",

@@ -13,7 +13,26 @@ Click here to add these patches to Morphe: https://morphe.software/add-source?gi
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.1](https://github.com/o0b/morphe-patches/releases/tag/v1.10.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;57 patches total
+> **[v1.11.0](https://github.com/o0b/morphe-patches/releases/tag/v1.11.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;58 patches total
+<details open>
+<summary>📦 Ivy&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 1.1.29 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Adjust animation speed](#adjust-animation-speed) | Scales or disables all XML-based animations in Ivy (Quick Panel, drawer, widget and handle animations). Set the scale to 0 to remove animations, or use the disable toggle. | • Animation scale<br>• Disable animations |
+| [Disable telemetry](#disable-telemetry) | Disables Fabric, Crashlytics, and Answers analytics. |  |
+| [Force offline](#force-offline) | Disables Firebase and RSS network fetches. |  |
+| [Remove INTERNET permission](#remove-internet-permission) | Strips the INTERNET permission and disables Ivy's ads, telemetry, Firebase and RSS network paths so the app starts fully offline instead of crashing. |  |
+| [Remove ads](#remove-ads) | Removes AdMob initialization and the quick panel ad view. |  |
+
+</details>
+
 <details open>
 <summary>📦 Nova Launcher&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
 <br>
@@ -62,24 +81,6 @@ Click here to add these patches to Morphe: https://morphe.software/add-source?gi
 |----------|----------------|-----------|
 | [Disable telemetry](#disable-telemetry) | Disables Firebase completely (init provider, analytics, Crashlytics, Remote Config wiring, install UUID), turns off the sale promo push notifications, and prevents Fyber's crash handler from installing at process start. |  |
 | [Unlock Pro](#unlock-pro) | Unlocks Business Calendar 2 Pro by forcing the complete pro status and the force-pro override to return true, routing every feature gate to the full package (7) without touching billing. |  |
-
-</details>
-
-<details open>
-<summary>📦 Ivy&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
-<br>
-
-**🎯 Supported versions:**
-
-| 1.1.29 |
-| :---: |
-
-| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
-|----------|----------------|-----------|
-| [Disable telemetry](#disable-telemetry) | Disables Fabric, Crashlytics, and Answers analytics. |  |
-| [Force offline](#force-offline) | Disables Firebase and RSS network fetches. |  |
-| [Remove INTERNET permission](#remove-internet-permission) | Strips the INTERNET permission and disables Ivy's ads, telemetry, Firebase and RSS network paths so the app starts fully offline instead of crashing. |  |
-| [Remove ads](#remove-ads) | Removes AdMob initialization and the quick panel ad view. |  |
 
 </details>
 
