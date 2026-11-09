@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.11.1",
+  "version": "1.12.0",
   "patches": [
     {
       "name": "Adjust animation speed",
@@ -742,6 +742,38 @@
       "category": null,
       "dependencies": [],
       "compatiblePackages": null,
+      "options": []
+    },
+    {
+      "name": "Remove Quick Panel transition animation",
+      "description": "Removes the code-driven open and close animations from the Quick Panel while keeping the RSS start and stop behavior.",
+      "default": true,
+      "category": null,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.stinger.ivy",
+          "name": "Ivy",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#2E7D32",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "1.1.29",
+              "versionCodes": {
+                "ARM64_V8A": 29,
+                "ARMEABI_V7A": 29,
+                "X86_64": 29,
+                "X86": 29
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
       "options": []
     },
     {

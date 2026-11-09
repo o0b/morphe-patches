@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-09T10:05:09",
-  "description": "## [1.11.1](https://github.com/o0b/morphe-patches/compare/v1.11.0...v1.11.1) (2026-11-09)\n\n### 🐛 Bug Fixes\n\n* IvyAnimationSpeedPatch.kt ([b0e50f1](https://github.com/o0b/morphe-patches/commit/b0e50f16bfb120409fe67bf78028b973d6caec0b))\n* IvyAnimationSpeedPatch.kt ([9a60f80](https://github.com/o0b/morphe-patches/commit/9a60f8030f64e922b1891467e89bd00e4d310044))",
-  "download_url": "https://github.com/o0b/morphe-patches/releases/download/v1.11.1/patches-1.11.1.mpp",
+  "created_at": "2026-11-09T10:31:31",
+  "description": "## [1.12.0](https://github.com/o0b/morphe-patches/compare/v1.11.1...v1.12.0) (2026-11-09)\n\n### ✨ New Features\n\n* IvyQuickPanelNoTransitionPatch.kt ([cf8f9ae](https://github.com/o0b/morphe-patches/commit/cf8f9ae11cd6c661e4915ffdf4752c9b74f0b8ad))",
+  "download_url": "https://github.com/o0b/morphe-patches/releases/download/v1.12.0/patches-1.12.0.mpp",
   "signature_download_url": "",
-  "version": "1.11.1"
+  "version": "1.12.0"
 }
